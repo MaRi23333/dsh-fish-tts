@@ -12,6 +12,11 @@ import { join } from 'node:path'
 import { apply } from '../src/index.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import { makeCtx, makeWeb, dispatch, jsonBody } from './helpers.ts'
+import { isolateEnvironment, installFailClosedNetwork } from './env-isolation.ts'
+
+// Credential isolation + fail-closed network before any plugin logic runs.
+isolateEnvironment()
+installFailClosedNetwork()
 
 // Fictional value only — never a real Fish Audio key.
 const FAKE_KEY = 'FISH-TTS-TEST-KEY-0123456789abcdef'

@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-fish-tts",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Fish Audio TTS plugin for DeepSeek Harness: per-message read-aloud, auto-read toggle in the composer, and a settings page for model / voice / encrypted API key / proxy.",
   "keywords": [
     "deepseek-harness",
@@ -12,6 +12,7 @@
   ],
   "type": "module",
   "main": "lib/index.js",
+  "private": true,
   "packageManager": "pnpm@11.21.0",
   "engines": {
     "node": ">=22"

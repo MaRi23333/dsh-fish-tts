@@ -197,6 +197,24 @@ function validateProxyForSave(value: string): string {
   return normalized
 }
 
+/**
+ * Sanitize a seed proxy (bundle-patch default) before it can be persisted:
+ * illegal schemes and credential-bearing URLs are dropped entirely — never
+ * written to settings.json, never echoed in responses, logs or errors
+ * (FISH-SEC-003). Unlike the PUT path this does not throw: a bad seed must
+ * not crash plugin startup, it is simply ignored.
+ */
+function sanitizeSeedProxy(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined
+  const trimmed = value.trim()
+  if (trimmed === '') return undefined
+  try {
+    return validateProxyForSave(trimmed)
+  } catch {
+    return undefined
+  }
+}
+
 /** Proxy port (default per scheme) for the localhost reachability probe. */
 function proxyPortOf(proxyUrl: string): number | null {
   try {
@@ -307,15 +325,24 @@ class SettingsStore {
     }
     if (this.file.version === 0) {
       // First run: migrate the bundle-patch defaults (if any) into the store,
-      // preserving any key material already present.
+      // preserving any key material already present. The seed proxy goes
+      // through the same validation as PUT saves (FISH-SEC-003).
       this.file = {
         version: SETTINGS_VERSION,
         model: this.file.model ?? seed.model,
         voice: this.file.voice ?? seed.voice,
         format: this.file.format ?? seed.format,
-        proxy: this.file.proxy ?? seed.proxy,
+        proxy: sanitizeSeedProxy(this.file.proxy ?? seed.proxy),
         ...(this.file.apiKeyCipher !== undefined ? { apiKeyCipher: this.file.apiKeyCipher } : {}),
       }
+      this.write()
+    }
+    // Stores written by older versions may still carry an illegal or
+    // credential-bearing proxy: converge it to unset and persist the cleanup
+    // so plaintext credentials never linger on disk.
+    const cleanedProxy = sanitizeSeedProxy(this.file.proxy)
+    if (cleanedProxy !== this.file.proxy) {
+      this.file.proxy = cleanedProxy
       this.write()
     }
   }
@@ -366,7 +393,11 @@ class SettingsStore {
     const voice = (this.file.voice ?? '').trim() || (config.voice ?? '').trim() || ''
     const rawFormat = (this.file.format ?? '').trim() || (config.format ?? '').trim() || 'wav'
     const format = FORMATS.has(rawFormat) ? rawFormat : 'wav'
-    const proxy = (this.file.proxy ?? '').trim() || (config.proxy ?? '').trim() || ''
+    // One validate-or-sanitize policy across seed, storage and patch config
+    // (FISH-SEC-003): illegal or credential-bearing proxies never become
+    // effective, are never persisted, and never appear in responses.
+    const rawProxy = (this.file.proxy ?? '').trim() || (config.proxy ?? '').trim() || ''
+    const proxy = sanitizeSeedProxy(rawProxy) ?? ''
     return { model, voice, format, proxy, storedKey, hasStoredKey: this.file.apiKeyCipher !== undefined }
   }
 

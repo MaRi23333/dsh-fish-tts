@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-fish-tts",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Fish Audio TTS plugin for DeepSeek Harness: per-message read-aloud, auto-read toggle in the composer, and a settings page for model / voice / encrypted API key / proxy.",
   "keywords": [
     "deepseek-harness",
@@ -12,8 +12,17 @@
   ],
   "type": "module",
   "main": "lib/index.js",
+  "packageManager": "pnpm@11.21.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<owner>/dsh-plugin-fish-tts.git"
+  },
+  "homepage": "https://github.com/<owner>/dsh-plugin-fish-tts#readme",
+  "bugs": {
+    "url": "https://github.com/<owner>/dsh-plugin-fish-tts/issues"
   },
   "exports": {
     ".": {
@@ -46,7 +55,11 @@
   },
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/security.test.ts tests/store.test.ts tests/clean.test.ts",
+    "smoke": "node scripts/smoke-host.mjs && node scripts/smoke-client.mjs",
+    "check:pack": "node scripts/check-pack.mjs",
+    "prepack": "pnpm run build"
   },
   "license": "MIT",
   "dependencies": {
@@ -72,6 +85,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tsdown": "^0.15.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
 }

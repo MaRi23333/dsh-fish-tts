@@ -69,6 +69,8 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
 
 - API Key 只以加密形态落盘（AES-256-GCM，每机随机密钥 `key.bin`，0600/ACL 收紧），不写入仓库、日志或任何 GET 响应。
 - 写接口（synthesize/config）强制 `application/json` 并校验同源/loopback Origin，杜绝跨站表单盗刷。
+- **仅本机使用**：所有 `/fish-tts/*` 路由拒绝非 loopback（127.0.0.1 / ::1 / ::ffff:127.0.0.1）来源的请求（403），即使宿主监听在 0.0.0.0 也不开放远程访问。
+- **代理不支持带用户名密码的地址**（`http://user:pass@host:port` 会在保存时被拒绝）；环境变量 `HTTPS_PROXY`/`HTTP_PROXY` 若带凭据同样会被忽略（不泄露、无回退），请改用无凭据的代理或直连。
 - 代理地址、模型、音色均为用户本机设置，仓库不携带任何个人信息。
 - 合成请求的文本上限 12000 字符；结果在进程内缓存（最多 200 条），重启即清。
 
@@ -77,8 +79,13 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
 ```sh
 pnpm install
 pnpm run typecheck
-pnpm run build   # host: lib/index.js；client: lib/client.js（ModuleLoader CJS closure）
+pnpm run test       # node:test 单元/集成测试（上游 Fish API 使用本地 mock，不触网）
+pnpm run build      # host: lib/index.js；client: lib/client.js（ModuleLoader CJS closure）
+pnpm run smoke      # host 入口 + client ModuleLoader 冒烟
+pnpm run check:pack # npm pack 内容白名单校验
 ```
+
+> 要求 Node >= 22（Node 20 已 EOL）。CI（`.github/workflows/ci.yml`）在 Node 22 与 24 上执行全部门禁，并校验 `lib/` 构建产物与提交一致。
 
 - host 侧在 `src/index.ts`（Node，注册 `/fish-tts/*` 路由与设置存储）
 - client 侧在 `src/client/`（React，注册 `conversation.chat.assistant-actions`、`conversation.input.left`、`settings.section` 三个 slot）

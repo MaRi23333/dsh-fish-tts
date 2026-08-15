@@ -12,6 +12,12 @@
  * API key stored there is encrypted with AES-256-GCM under a per-machine key
  * file ($DSH_HOME/fish-tts/key.bin, created once, ACL-tightened on Windows).
  * The key never appears in any GET response, log line, or the repository.
+ *
+ * Threat model (local-only): every route rejects non-loopback peers
+ * (remoteAddress must be 127.0.0.1 / ::1 / ::ffff:127.0.0.1) with 403, and
+ * write routes additionally require application/json + same-origin/loopback
+ * Origin. Proxy URLs with userinfo are refused at save time so credentials
+ * can never be echoed by GET responses.
  */
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
@@ -134,15 +140,61 @@ function portOpen(port: number, timeoutMs = 400): Promise<boolean> {
   })
 }
 
-/** Normalize a user-configured proxy URL; http/https only, credentials kept. */
+/**
+ * Normalize a user-configured proxy URL; http/https only.
+ *
+ * URLs carrying userinfo (username/password) are rejected outright: the
+ * saved proxy is echoed by GET /status and GET /config, so credentials in
+ * the proxy URL would leak into browser-readable JSON responses (FISH-SEC-001).
+ */
 function proxyOf(url: string): string | null {
   try {
     const parsed = new URL(url)
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+    if (parsed.username !== '' || parsed.password !== '') return null
     return parsed.href.replace(/\/$/, '')
   } catch {
     return null
   }
+}
+
+/**
+ * Redact any userinfo from a proxy URL before it reaches a response.
+ * Malformed URLs fail closed (return '') so a broken-but-credentialed
+ * patch-config value can never be echoed verbatim.
+ */
+function redactProxy(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (parsed.username !== '' || parsed.password !== '') {
+      parsed.username = ''
+      parsed.password = ''
+      return parsed.href.replace(/\/$/, '')
+    }
+    return url
+  } catch {
+    return ''
+  }
+}
+
+/** Thrown when a settings patch must not be persisted. */
+class SettingsError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'SettingsError'
+  }
+}
+
+/** Validate a proxy value before persisting; throws SettingsError with a
+ * user-readable message when the value must not be saved. */
+function validateProxyForSave(value: string): string {
+  const trimmed = value.trim()
+  if (trimmed === '') return ''
+  const normalized = proxyOf(trimmed)
+  if (normalized === null) {
+    throw new SettingsError('proxy must be an http:// or https:// URL without username/password')
+  }
+  return normalized
 }
 
 /** Proxy port (default per scheme) for the localhost reachability probe. */
@@ -228,6 +280,10 @@ class SettingsStore {
   private readonly filePath: string
   private readonly key: Buffer
   private file: SettingsFile
+  /** True when settings.json could not be parsed at all (or was not an
+   * object) — only then is the file parked as .corrupt-*; a well-formed v0
+   * file is migrated in place instead. */
+  private parseFailed = false
 
   constructor(dir: string, seed: { model: string; voice: string; format: string; proxy: string }) {
     mkdirSync(dir, { recursive: true })
@@ -240,7 +296,7 @@ class SettingsStore {
       hadContent = false
     }
     this.file = this.read()
-    if (this.file.version === 0 && hadContent) {
+    if (this.file.version === 0 && hadContent && this.parseFailed) {
       // The file existed but did not parse — never silently destroy user
       // data (including the key ciphertext): park it aside first.
       try {
@@ -274,7 +330,11 @@ class SettingsStore {
       // healthy store into a version-0 migration that wipes user data.
       const raw = readFileSync(this.filePath).toString('utf8').replace(/^\uFEFF/, '').trim()
       const parsed = JSON.parse(raw) as Partial<SettingsFile>
-      if (typeof parsed !== 'object' || parsed === null) return { version: 0 }
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        // Well-formed JSON but not a settings object — treat as corrupt.
+        this.parseFailed = true
+        return { version: 0 }
+      }
       return {
         version: typeof parsed.version === 'number' ? parsed.version : 0,
         model: typeof parsed.model === 'string' ? parsed.model : undefined,
@@ -286,6 +346,7 @@ class SettingsStore {
           : undefined,
       }
     } catch {
+      this.parseFailed = true
       return { version: 0 }
     }
   }
@@ -318,6 +379,12 @@ class SettingsStore {
     apiKey?: string
     clearKey?: boolean
   }): void {
+    // Validate the whole patch before mutating any in-memory state, so a
+    // rejected proxy (FISH-SEC-001) cannot leave partially-applied fields.
+    let nextProxy: string | undefined
+    if (patch.proxy !== undefined) {
+      nextProxy = patch.proxy.trim() === '' ? '' : validateProxyForSave(patch.proxy)
+    }
     if (patch.model !== undefined) {
       this.file.model = patch.model.trim() === '' ? undefined : patch.model.trim()
     }
@@ -329,7 +396,7 @@ class SettingsStore {
       this.file.format = FORMATS.has(format) ? format : undefined
     }
     if (patch.proxy !== undefined) {
-      this.file.proxy = patch.proxy.trim() === '' ? undefined : patch.proxy.trim()
+      this.file.proxy = nextProxy === '' ? undefined : nextProxy
     }
     if (patch.clearKey === true) {
       delete this.file.apiKeyCipher
@@ -339,7 +406,7 @@ class SettingsStore {
     this.write()
   }
 
-  /** Public summary: everything except key material. */
+  /** Public summary: everything except key material, proxy userinfo redacted. */
   summary(config: Config): {
     model: string
     voice: string
@@ -353,7 +420,7 @@ class SettingsStore {
       model: eff.model,
       voice: eff.voice,
       format: eff.format,
-      proxy: eff.proxy,
+      proxy: redactProxy(eff.proxy),
       keyConfigured: eff.storedKey !== '' || resolveEnvKey(config) !== '',
       hasStoredKey: eff.hasStoredKey,
     }
@@ -535,7 +602,8 @@ export function apply(ctx: Context, config: Config): void {
       if (normalized !== null) {
         try {
           const parsed = new URL(normalized)
-          const local = parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '::1'
+          // Node's URL keeps IPv6 hosts bracketed: '[::1]'.
+          const local = parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost' || parsed.hostname === '::1' || parsed.hostname === '[::1]'
           const port = proxyPortOf(normalized)
           if (!local || port === null || await portOpen(port)) proxies.push(normalized)
         } catch {
@@ -547,6 +615,25 @@ export function apply(ctx: Context, config: Config): void {
     const envNormalized = proxyOf(envProxy ?? '')
     if (envNormalized !== null && !proxies.includes(envNormalized)) proxies.push(envNormalized)
     return proxies
+  }
+
+  // Local-only threat model (FISH-SEC-002): this plugin serves configuration,
+  // model and synthesis endpoints that consume API quota and modify settings.
+  // The harness web server may listen on 0.0.0.0, so the plugin itself must
+  // reject peers that are not on the loopback interface. CORS/Origin checks
+  // are not authentication — the remote-address check is the enforcement.
+  const isLoopbackAddress = (address: string | undefined): boolean => {
+    if (address === undefined || address === '') return false
+    const clean = address.replace(/^::ffff:/, '').toLowerCase()
+    return clean === '127.0.0.1' || clean === '::1' || clean === 'localhost'
+  }
+
+  const guardLoopback = (req: IncomingMessage, res: ServerResponse): boolean => {
+    if (!isLoopbackAddress(req.socket.remoteAddress)) {
+      sendJson(res, 403, { ok: false, error: 'non-loopback-forbidden' })
+      return false
+    }
+    return true
   }
 
   // Cross-origin write protection: browser forms cannot send JSON, and a
@@ -595,6 +682,7 @@ export function apply(ctx: Context, config: Config): void {
           return
         }
         if (!guardWrite(req, res)) return
+        if (!guardLoopback(req, res)) return
         const body = await readJsonBody(req)
         const text = typeof body?.['text'] === 'string' ? body['text'] : ''
         if (text.trim() === '') {
@@ -660,7 +748,12 @@ export function apply(ctx: Context, config: Config): void {
     ctx.effect(() => web.register({
       kind: 'exact',
       path: '/fish-tts/status',
-      handler: (_req, res) => {
+      handler: (req, res) => {
+        if (req.method !== 'GET') {
+          sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
+          return
+        }
+        if (!guardLoopback(req, res)) return
         sendJson(res, 200, { ok: true, ...store.summary(config), cacheEntries: cache.size })
       },
     }), 'fish-tts: status route')
@@ -669,6 +762,7 @@ export function apply(ctx: Context, config: Config): void {
       kind: 'exact',
       path: '/fish-tts/config',
       handler: async (req, res) => {
+        if (!guardLoopback(req, res)) return
         if (req.method === 'GET') {
           const eff = store.effective(config)
           sendJson(res, 200, {
@@ -676,7 +770,7 @@ export function apply(ctx: Context, config: Config): void {
             model: eff.model,
             voice: eff.voice,
             format: eff.format,
-            proxy: eff.proxy,
+            proxy: redactProxy(eff.proxy),
             keyConfigured: eff.storedKey !== '' || resolveEnvKey(config) !== '',
             hasStoredKey: eff.hasStoredKey,
           })
@@ -699,7 +793,11 @@ export function apply(ctx: Context, config: Config): void {
           try {
             store.update(patch)
           } catch (error) {
-            sendJson(res, 500, { ok: false, error: 'save-failed', message: truncate(error instanceof Error ? error.message : 'save failed') })
+            if (error instanceof SettingsError) {
+              sendJson(res, 400, { ok: false, error: 'invalid-proxy', message: truncate(error.message) })
+            } else {
+              sendJson(res, 500, { ok: false, error: 'save-failed', message: truncate(error instanceof Error ? error.message : 'save failed') })
+            }
             return
           }
           sendJson(res, 200, { ok: true, ...store.summary(config) })
@@ -712,7 +810,12 @@ export function apply(ctx: Context, config: Config): void {
     ctx.effect(() => web.register({
       kind: 'exact',
       path: '/fish-tts/models',
-      handler: async (_req, res) => {
+      handler: async (req, res) => {
+        if (req.method !== 'GET') {
+          sendJson(res, 405, { ok: false, error: 'method-not-allowed' })
+          return
+        }
+        if (!guardLoopback(req, res)) return
         const apiKey = store.apiKey(config)
         const proxies = apiKey === '' ? [] : await buildProxies()
         const ids = apiKey === '' ? [] : await fetchModelIds(apiKey, proxies, { get: getAgent })

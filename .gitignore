@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+*.tmp
+
+# Internal handoff doc (HANDOFF.md) stays out of the published repo:
+# it contains local machine paths. Keep the file on disk for local dev.
+HANDOFF.md

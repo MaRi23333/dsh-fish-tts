@@ -1,0 +1,8 @@
+# dsh-plugin-fish-tts bundle patch: insert the host row into the composition.
+# The row id must be unique; `name` must equal the package name so the
+# client-modules roster can resolve it. No defaults are shipped here — model,
+# voice, proxy and API key are configured in the plugin's own settings page
+# (stored under $DSH_HOME/fish-tts/) or via the profile's cordis.patch.yml.
+- insert:
+    - id: fish-tts
+      name: dsh-plugin-fish-tts

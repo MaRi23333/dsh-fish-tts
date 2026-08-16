@@ -1,10 +1,18 @@
 /**
- * Simple geometric speaker glyphs shared by the per-message action button and
- * the composer auto-read toggle. Pure inline SVG, no icon library.
+ * Speaker glyphs matching the DSH native action-bar icon style.
+ *
+ * Native icons (copy / thumbs / branch) are 16x16 single-path glyphs whose
+ * "outline" is a ~1.35px filled band in currentColor. These speaker glyphs
+ * reproduce that weight with stroked outlines (stroke-width 1.35, round
+ * joins/caps) which render identically at the fixed 16px size.
+ *
+ * Variants: default (speaker + one wave), playing (two waves), muted (X).
+ * Drop-in replacement for the previous filled-silhouette version
+ * (design delivery: fish-tts-branding pack, 2026-08-16).
  */
 
 export interface SpeakerIconProps {
-  /** Render the muted variant (speaker body + slash). */
+  /** Render the muted variant (speaker body + X). */
   muted?: boolean
   /** Render the two-arc playing variant (waves). */
   playing?: boolean
@@ -13,7 +21,13 @@ export interface SpeakerIconProps {
 export function SpeakerIcon({ muted = false, playing = false }: SpeakerIconProps): React.ReactElement {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M2.5 6.5v3h2.2L8 12.2V3.8L4.7 6.5H2.5z" fill="currentColor" />
+      {/* Speaker body outline — band weight matches native action icons (~1.35px). */}
+      <path
+        d="M2.6 6.9H5.1L8.2 4V12L5.1 9.1H2.6Z"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+      />
       {muted
         ? (
             <path d="M10.1 6.3l3.5 3.5M13.6 6.3l-3.5 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -21,12 +35,12 @@ export function SpeakerIcon({ muted = false, playing = false }: SpeakerIconProps
         : playing
           ? (
               <>
-                <path d="M10.2 6.2a2.6 2.6 0 010 3.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                <path d="M11.8 4.6a4.8 4.8 0 010 6.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                <path d="M10.25 6.27A2.2 2.2 0 0 1 10.25 9.73" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                <path d="M11.36 4.85A4 4 0 0 1 11.36 11.15" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
               </>
             )
           : (
-              <path d="M10.2 6a2.6 2.6 0 010 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M10.25 6.27A2.2 2.2 0 0 1 10.25 9.73" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
             )}
     </svg>
   )

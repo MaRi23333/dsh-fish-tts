@@ -1,16 +1,31 @@
 # dsh-plugin-fish-tts
 
+**中文 | [English](./README.en.md)**
+
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-plugin-fish-tts — Fish Audio 语音朗读插件 for DeepSeek Harness" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-plugin-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
+  <img src="https://img.shields.io/github/license/MaRi23333/dsh-plugin-fish-tts?style=flat-square" alt="License: MIT" />
+  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.0--rc.6-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.0-rc.6" />
+</p>
+
+> **English:** dsh-plugin-fish-tts brings [Fish Audio](https://fish.audio) text-to-speech to the
+> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web GUI: a per-message
+> "Read aloud" action, an auto-read toggle in the composer, and a settings page for model /
+> voice / encrypted API key / proxy. Bilingual UI (zh/en). See [README.en.md](./README.en.md)
+> for the full English version.
+
+## 简介
+
 Fish Audio 语音朗读插件 for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）。
 给 Web GUI 增加：每条助手消息的「朗读」按钮、输入栏的自动朗读开关、以及可编辑模型 / 音色 / API Key / 代理的设置页。
 
-A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that adds
-Fish Audio read-aloud to the Web GUI: a per-message "Read aloud" action, an
-auto-read toggle in the composer, and a settings page for model / voice /
-encrypted API key / proxy.
+## 功能
 
-## 功能 Features
-
-- **朗读按钮**：每条定稿的助手消息操作条里有一个「朗读 / Read aloud」按钮，点击合成并播放该条回复（markdown 会被清理：路径/URL/长编号/代码块不会读出来）。
+- **朗读按钮**：每条定稿的助手消息操作条里有一个「朗读 / Read aloud」按钮（图标与原生操作条图标同风格），点击合成并播放该条回复。markdown 会被清洗：路径 / URL / 长编号 / 代码块不会读出来。
 - **自动朗读**：输入框工具行的小喇叭开关（与设置页同步），开启后自动朗读页面加载后产生的新回复。
 - **设置页**（Settings → 语音朗读 / Voice (Fish TTS)）：
   - TTS 模型（下拉建议 + 手动输入，支持 s2.1-pro-free / s2.1-pro / s2-pro 等，保存后立即生效；默认 s2.1-pro-free）
@@ -18,9 +33,9 @@ encrypted API key / proxy.
   - API Key（**AES-256-GCM 加密存储**在本机 `$DSH_HOME/fish-tts/settings.json`，密钥文件 `key.bin` 自动生成并在 Windows 上收紧 ACL；Key 不会出现在任何 GET 响应、日志或仓库中）
   - HTTP 代理（例如 `http://127.0.0.1:7890`，直连不通时可填）
   - 试听按钮、自动朗读开关、音量滑条（默认 60%）
-- 双语界面（中文 / English，跟随 DSH 语言设置）。
+- **双语界面**（中文 / English，跟随 DSH 语言设置；en 词条与 zh 完全对齐）。
 
-## 安装 Install
+## 安装
 
 ```sh
 # 从 GitHub 安装（git-hosted 插件会在安装时构建）
@@ -37,9 +52,7 @@ dsh plugin --profile web add /absolute/path/to/dsh-plugin-fish-tts
 
 > 仓库已提交 `lib/` 构建产物，git 安装无需本地构建；改源码后运行 `pnpm run build` 再重启即可。
 
-Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh the page.
-
-## 配置 Configuration
+## 配置
 
 首次使用：打开 Settings → 语音朗读，填模型、音色、API Key（Fish Audio 的 key），必要时填代理，保存后用「试听」验证。所有设置在保存后**立即生效**，无需再次重启。
 
@@ -53,7 +66,7 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
     stateDir: /custom/state/dir
 ```
 
-### 配置项 Config keys
+### 配置项
 
 | Key | 默认 | 说明 |
 | --- | --- | --- |
@@ -65,7 +78,7 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
 | `proxy` | `''` | HTTP(S) 代理（设置页保存值优先） |
 | `stateDir` | `$DSH_HOME/fish-tts` | 设置/密钥文件目录 |
 
-## 安全 Security
+## 安全
 
 - API Key 只以加密形态落盘（AES-256-GCM，每机随机密钥 `key.bin`，0600/ACL 收紧），不写入仓库、日志或任何 GET 响应。
 - 写接口（synthesize/config）强制 `application/json` 并校验同源/loopback Origin，杜绝跨站表单盗刷。
@@ -74,7 +87,7 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
 - 代理地址、模型、音色均为用户本机设置，仓库不携带任何个人信息。
 - 合成请求的文本上限 12000 字符；结果在进程内缓存（最多 200 条），重启即清。
 
-## 开发 Develop
+## 开发
 
 ```sh
 pnpm install
@@ -94,3 +107,8 @@ pnpm run check:pack # npm pack 内容白名单校验
 ## License
 
 [MIT](./LICENSE)
+
+---
+
+*独立社区项目，与 DeepSeek 无隶属关系，亦未经其认可。DeepSeek 与 DeepSeek Harness 商标归各自所有者所有。*
+*Independent community project — not affiliated with or endorsed by DeepSeek.*

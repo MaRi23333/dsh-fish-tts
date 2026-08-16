@@ -140,7 +140,11 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
           opacity: busy ? 0.55 : 1,
           display: 'inline-flex',
           alignItems: 'center',
-          color: failure !== null ? 'var(--dsh-color-danger, #e5484d)' : 'inherit',
+          // Native action-bar icons render in a mid grey
+          // (oklch(0.57953 0.0000288494 none) ≈ #7a7a7a). DSH rc.6 ships no
+          // --dsh-color-* token set (all --dsh-* vars are layout), so the
+          // measured value is used directly. Failure stays red.
+          color: failure !== null ? 'var(--dsh-color-danger, #e5484d)' : '#7a7a7a',
         }}
       >
         <SpeakerIcon playing={isPlaying} />

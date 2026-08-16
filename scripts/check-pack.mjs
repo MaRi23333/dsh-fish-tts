@@ -57,7 +57,9 @@ const files = result.files.map((f) => f.path).sort()
 
 const expected = [
   'LICENSE',
+  'README.en.md',
   'README.md',
+  'assets/readme/hero.svg',
   'cordis.patch.yml',
   'lib/client.js',
   'lib/client.js.map',

@@ -19,11 +19,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/<owner>/dsh-plugin-fish-tts.git"
+    "url": "git+https://github.com/MaRi23333/dsh-plugin-fish-tts.git"
   },
-  "homepage": "https://github.com/<owner>/dsh-plugin-fish-tts#readme",
+  "homepage": "https://github.com/MaRi23333/dsh-plugin-fish-tts#readme",
   "bugs": {
-    "url": "https://github.com/<owner>/dsh-plugin-fish-tts/issues"
+    "url": "https://github.com/MaRi23333/dsh-plugin-fish-tts/issues"
   },
   "exports": {
     ".": {

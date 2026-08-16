@@ -24,10 +24,10 @@ encrypted API key / proxy.
 
 ```sh
 # 从 GitHub 安装（git-hosted 插件会在安装时构建）
-dsh plugin --profile web add github:<your-name>/dsh-plugin-fish-tts
+dsh plugin --profile web add github:MaRi23333/dsh-plugin-fish-tts
 
 # 或从本地目录安装
-git clone https://github.com/<your-name>/dsh-plugin-fish-tts.git
+git clone https://github.com/MaRi23333/dsh-plugin-fish-tts.git
 cd dsh-plugin-fish-tts
 pnpm install && pnpm run build
 dsh plugin --profile web add /absolute/path/to/dsh-plugin-fish-tts

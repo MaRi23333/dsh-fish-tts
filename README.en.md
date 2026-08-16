@@ -3,7 +3,7 @@
 **English | [中文](./README.md)**
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-fish-tts — Fish Audio read-aloud plugin for DeepSeek Harness" />
+  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-fish-tts — TTS plugin for DeepSeek Harness (Fish Audio API only)" />
 </p>
 
 <p align="center">
@@ -12,10 +12,11 @@
   <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.0--rc.6-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.0-rc.6" />
 </p>
 
-A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) plugin that adds
-[Fish Audio](https://fish.audio) text-to-speech to the Web GUI: a per-message "Read aloud"
-action, an auto-read toggle in the composer, and a settings page for model / voice /
-encrypted API key / proxy. The UI is bilingual (English / 中文, follows the DSH locale).
+A third-party **text-to-speech (TTS) plugin** for the
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) Web GUI:
+one-click read-aloud for every assistant reply, an auto-read toggle in the composer,
+and configurable model / voice / encrypted API key / proxy. **Fish Audio API only —
+bring your own API key.** The UI is bilingual (English / 中文, follows the DSH locale).
 
 ## Features
 
@@ -124,6 +125,15 @@ pnpm run check:pack # npm pack content whitelist check
 ## License
 
 [MIT](./LICENSE)
+
+### Compliance & Third-Party Notice
+
+- This is a **third-party open-source plugin**, not affiliated with, sponsored, or endorsed by Fish Audio / Hanabi AI Inc. "Fish Audio" is a trademark of its owner and is used here descriptively only.
+- The plugin **does not distribute or host API keys** — use your own Fish Audio account and key, and keep it safe.
+- Fish Audio's **free tier is for personal, non-commercial use only**; commercial use requires a paid plan. See the [Terms of Use](https://fish.audio/terms).
+- Only use voices (reference_id) you are authorized to use. Do not clone or imitate the voice of public figures, celebrities, or private individuals without permission. See the [Acceptable Use Policy](https://fishaudio.org/zh/acceptable-use).
+- When distributing generated audio, disclose that it is AI-synthesized; do not mislead listeners into believing it is a real human recording.
+- Using this plugin means you agree to Fish Audio's terms; the official pages prevail if updated.
 
 ---
 

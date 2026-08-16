@@ -23,7 +23,7 @@
   <text x="248" y="152" font-family="ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace"
         font-size="46" font-weight="700" fill="#16204a" letter-spacing="-0.5">dsh-fish-tts</text>
   <text x="248" y="200" font-family="'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif"
-        font-size="23" fill="#3d4468">Fish Audio 语音朗读插件 for DeepSeek Harness</text>
+        font-size="23" fill="#3d4468">DeepSeek Harness 语音合成插件 · 仅支持 Fish Audio API</text>
   <text x="248" y="238" font-family="'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif"
         font-size="16" fill="#7c84a8">每条回复一键朗读 · 输入栏自动朗读开关 · 模型 / 音色 / 加密 Key / 代理可配置 — read-aloud for the DSH Web GUI</text>
 

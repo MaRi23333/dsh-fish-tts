@@ -3,7 +3,7 @@
 **中文 | [English](./README.en.md)**
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-fish-tts — Fish Audio 语音朗读插件 for DeepSeek Harness" />
+  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-fish-tts — DeepSeek Harness 语音合成插件（仅支持 Fish Audio API）" />
 </p>
 
 <p align="center">
@@ -12,16 +12,16 @@
   <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.0--rc.6-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.0-rc.6" />
 </p>
 
-> **English:** dsh-fish-tts brings [Fish Audio](https://fish.audio) text-to-speech to the
-> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web GUI: a per-message
-> "Read aloud" action, an auto-read toggle in the composer, and a settings page for model /
-> voice / encrypted API key / proxy. Bilingual UI (zh/en). See [README.en.md](./README.en.md)
-> for the full English version.
+> **English:** dsh-fish-tts is a third-party **TTS plugin** for the
+> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web GUI —
+> [Fish Audio](https://fish.audio) API only, bring your own key: a per-message
+> "Read aloud" action, an auto-read toggle in the composer, and a settings page for
+> model / voice / encrypted API key / proxy. Bilingual UI (zh/en). See
+> [README.en.md](./README.en.md) for the full English version.
 
 ## 简介
 
-Fish Audio 语音朗读插件 for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）。
-给 Web GUI 增加：每条助手消息的「朗读」按钮、输入栏的自动朗读开关、以及可编辑模型 / 音色 / API Key / 代理的设置页。
+面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）Web GUI 的第三方**语音合成（TTS）插件**：为每条助手回复提供一键朗读，输入栏带自动朗读开关，模型 / 音色 / 加密 Key / 代理均可配置。**仅支持 [Fish Audio](https://fish.audio) API，需自备 API Key。**
 
 ## 功能
 
@@ -107,6 +107,15 @@ pnpm run check:pack # npm pack 内容白名单校验
 ## License
 
 [MIT](./LICENSE)
+
+### 合规与第三方声明
+
+- 本项目是**第三方开源插件**，与 Fish Audio / Hanabi AI Inc. 无任何隶属、合作或背书关系。"Fish Audio" 为其权利人的商标，此处仅为描述性使用（说明本插件所对接的服务）。
+- 本插件**不分发、不托管任何 API Key**；请使用你自己的 Fish Audio 账号与 Key，并妥善保管。
+- Fish Audio **免费额度仅限个人、非商业用途**；商业使用请订阅官方付费套餐。详见 [Terms of Use](https://fish.audio/terms)。
+- 仅可使用你有权使用的音色（reference_id）。未经授权，不得克隆或模仿公众人物、名人或他人的声音。详见 [Acceptable Use Policy](https://fishaudio.org/zh/acceptable-use)。
+- 对外分发生成的音频时，建议主动披露其为 AI 合成内容，不得误导听众认为是真人真实发言。
+- 使用本插件即表示你同意遵守 Fish Audio 的全部服务条款；条款如有更新，以官方页面为准。
 
 ---
 

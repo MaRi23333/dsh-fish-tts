@@ -1,14 +1,14 @@
-# dsh-plugin-fish-tts
+# dsh-fish-tts
 
 **English | [中文](./README.md)**
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-plugin-fish-tts — Fish Audio read-aloud plugin for DeepSeek Harness" />
+  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-fish-tts — Fish Audio read-aloud plugin for DeepSeek Harness" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-plugin-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
-  <img src="https://img.shields.io/github/license/MaRi23333/dsh-plugin-fish-tts?style=flat-square" alt="License: MIT" />
+  <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
+  <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
   <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.0--rc.6-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.0-rc.6" />
 </p>
 
@@ -40,13 +40,13 @@ encrypted API key / proxy. The UI is bilingual (English / 中文, follows the DS
 
 ```sh
 # From GitHub (git-hosted plugins build on install)
-dsh plugin --profile web add github:MaRi23333/dsh-plugin-fish-tts
+dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
 
 # Or from a local checkout
-git clone https://github.com/MaRi23333/dsh-plugin-fish-tts.git
-cd dsh-plugin-fish-tts
+git clone https://github.com/MaRi23333/dsh-fish-tts.git
+cd dsh-fish-tts
 pnpm install && pnpm run build
-dsh plugin --profile web add /absolute/path/to/dsh-plugin-fish-tts
+dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ```
 
 Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh the page.

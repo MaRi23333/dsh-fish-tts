@@ -1,5 +1,5 @@
 /**
- * Locale namespace declaration and bilingual dictionaries for dsh-plugin-fish-tts.
+ * Locale namespace declaration and bilingual dictionaries for dsh-fish-tts.
  * The namespace merge into LocaleNamespaceMap is what makes the slot-level
  * `locale: 'fish-tts'` seat and the typed `t` prop work.
  */

@@ -20,9 +20,9 @@ globalThis.window = {
 
 require('../lib/client.js')
 
-assert.ok(factories.has('dsh-plugin-fish-tts'), 'client bundle did not self-register under its id')
+assert.ok(factories.has('dsh-fish-tts'), 'client bundle did not self-register under its id')
 
-const factory = factories.get('dsh-plugin-fish-tts')
+const factory = factories.get('dsh-fish-tts')
 const exported = factory((id) => {
   if (id === 'react') return { createElement: () => null, Fragment: () => null }
   if (id === 'react/jsx-runtime') return { jsx: () => null, jsxs: () => null, Fragment: () => null }
@@ -34,4 +34,4 @@ const exported = factory((id) => {
 
 assert.ok(exported !== null && typeof exported === 'object', 'client factory must return module exports')
 
-console.log('client ModuleLoader smoke OK: registered "dsh-plugin-fish-tts", factory executed')
+console.log('client ModuleLoader smoke OK: registered "dsh-fish-tts", factory executed')

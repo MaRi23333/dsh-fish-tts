@@ -1,5 +1,5 @@
 /**
- * dsh-plugin-fish-tts — host half.
+ * dsh-fish-tts — host half.
  *
  * Routes on the harness webserver:
  *   POST /fish-tts/synthesize  { text, format? } -> raw audio bytes

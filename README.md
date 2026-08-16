@@ -1,18 +1,18 @@
-# dsh-plugin-fish-tts
+# dsh-fish-tts
 
 **中文 | [English](./README.en.md)**
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-plugin-fish-tts — Fish Audio 语音朗读插件 for DeepSeek Harness" />
+  <img src="./assets/readme/hero.svg" width="100%" alt="dsh-fish-tts — Fish Audio 语音朗读插件 for DeepSeek Harness" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-plugin-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
-  <img src="https://img.shields.io/github/license/MaRi23333/dsh-plugin-fish-tts?style=flat-square" alt="License: MIT" />
+  <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
+  <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
   <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.0--rc.6-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.0-rc.6" />
 </p>
 
-> **English:** dsh-plugin-fish-tts brings [Fish Audio](https://fish.audio) text-to-speech to the
+> **English:** dsh-fish-tts brings [Fish Audio](https://fish.audio) text-to-speech to the
 > [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) Web GUI: a per-message
 > "Read aloud" action, an auto-read toggle in the composer, and a settings page for model /
 > voice / encrypted API key / proxy. Bilingual UI (zh/en). See [README.en.md](./README.en.md)
@@ -39,13 +39,13 @@ Fish Audio 语音朗读插件 for [DeepSeek Harness](https://github.com/deepseek
 
 ```sh
 # 从 GitHub 安装（git-hosted 插件会在安装时构建）
-dsh plugin --profile web add github:MaRi23333/dsh-plugin-fish-tts
+dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
 
 # 或从本地目录安装
-git clone https://github.com/MaRi23333/dsh-plugin-fish-tts.git
-cd dsh-plugin-fish-tts
+git clone https://github.com/MaRi23333/dsh-fish-tts.git
+cd dsh-fish-tts
 pnpm install && pnpm run build
-dsh plugin --profile web add /absolute/path/to/dsh-plugin-fish-tts
+dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ```
 
 然后**重启 dsh web**（关掉终端重新运行 `dsh web`）并刷新页面。

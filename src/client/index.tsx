@@ -1,5 +1,5 @@
 /**
- * dsh-plugin-fish-tts — browser half.
+ * dsh-fish-tts — browser half.
  *
  * 1. A "朗读" entry in the assistant-message action strip
  *    (slot `conversation.chat.assistant-actions`), with opt-in auto-play of

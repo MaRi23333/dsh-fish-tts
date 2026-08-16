@@ -1,6 +1,6 @@
 {
-  "name": "dsh-plugin-fish-tts",
-  "version": "0.2.3",
+  "name": "dsh-fish-tts",
+  "version": "0.2.4",
   "description": "Fish Audio TTS plugin for DeepSeek Harness: per-message read-aloud, auto-read toggle in the composer, and a settings page for model / voice / encrypted API key / proxy.",
   "keywords": [
     "deepseek-harness",
@@ -19,11 +19,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MaRi23333/dsh-plugin-fish-tts.git"
+    "url": "git+https://github.com/MaRi23333/dsh-fish-tts.git"
   },
-  "homepage": "https://github.com/MaRi23333/dsh-plugin-fish-tts#readme",
+  "homepage": "https://github.com/MaRi23333/dsh-fish-tts#readme",
   "bugs": {
-    "url": "https://github.com/MaRi23333/dsh-plugin-fish-tts/issues"
+    "url": "https://github.com/MaRi23333/dsh-fish-tts/issues"
   },
   "exports": {
     ".": {

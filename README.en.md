@@ -14,9 +14,20 @@
 
 A third-party **text-to-speech (TTS) plugin** for the
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) Web GUI:
-one-click read-aloud for every assistant reply, an auto-read toggle in the composer,
-and configurable model / voice / encrypted API key / proxy. **Fish Audio API only —
-bring your own API key.** The UI is bilingual (English / 中文, follows the DSH locale).
+one-click **read-aloud** for every assistant reply, an **auto-read** toggle in the
+composer, and configurable model / voice / encrypted API key / proxy. **Fish Audio
+API only — bring your own API key.** Works with any voice id (`reference_id`) you
+are authorized to use, including voices you **cloned** on Fish Audio. The UI is
+bilingual (English / 中文, follows the DSH locale).
+
+### 30-second comparison vs. typical Edge TTS plugins
+
+| | dsh-fish-tts (this plugin) | typical Edge TTS plugins |
+| --- | --- | --- |
+| Engine | **Fish Audio official API** (only; bring your own key) | Microsoft Edge built-in voices |
+| Voice | Your own `reference_id` (incl. voices you cloned, must be authorized) | Fixed Edge voice library |
+| API key | **Required** (AES-256-GCM encrypted in the settings page) | None |
+| Best for | Users with a Fish Audio account who want their own or cloned voices | Quick free trials with fixed voices |
 
 ## Features
 
@@ -54,6 +65,15 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
 
 > The repo commits `lib/` build artifacts, so git installs need no local build; after
 > changing sources run `pnpm run build` and restart.
+
+### Verify the install
+
+1. Open **Settings → Voice (Fish TTS)**;
+2. Fill in your **API key** and voice **`reference_id`**;
+3. Click **Test** — hearing the test sentence in your voice means the install works.
+
+> The **Test** button performs one real synthesis and verifies the key, the voice and
+> the proxy configuration in a single click.
 
 ## Configuration
 

@@ -21,7 +21,16 @@
 
 ## 简介
 
-面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）Web GUI 的第三方**语音合成（TTS）插件**：为每条助手回复提供一键朗读，输入栏带自动朗读开关，模型 / 音色 / 加密 Key / 代理均可配置。**仅支持 [Fish Audio](https://fish.audio) API，需自备 API Key。**
+面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）Web GUI 的第三方**语音合成（TTS）插件**：为每条助手回复提供一键**朗读**，输入栏带**自动朗读**开关，模型 / 音色 / 加密 Key / 代理均可配置。**仅支持 [Fish Audio](https://fish.audio) API，需自备 API Key。** 使用你自己的 Fish 音色（`reference_id`，含自行**克隆**的音色）——朗读、试听都走你配置的**语音**。
+
+### 30 秒对比：与常见 Edge TTS 朗读插件
+
+| 对比项 | dsh-fish-tts（本插件） | 常见 Edge TTS 朗读插件 |
+| --- | --- | --- |
+| 合成引擎 | **Fish Audio 官方 API**（仅支持；需自备 Key） | 微软 Edge 内置语音 |
+| 音色 | 你自己的音色 `reference_id`（含自行克隆的音色，须有使用权限） | Edge 内置固定音色库 |
+| API Key | **必须自备**（设置页 AES-256-GCM 加密保存） | 无需 |
+| 适合谁 | 已有 Fish Audio 账号、想要自己或克隆音色的用户 | 想免费快速试用、固定音色即可的用户 |
 
 ## 功能
 
@@ -51,6 +60,14 @@ dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 然后**重启 dsh web**（关掉终端重新运行 `dsh web`）并刷新页面。
 
 > 仓库已提交 `lib/` 构建产物，git 安装无需本地构建；改源码后运行 `pnpm run build` 再重启即可。
+
+### 安装后验证
+
+1. 打开 **Settings → 语音朗读**（Voice (Fish TTS)）；
+2. 填入你的 **API Key** 和音色 **`reference_id`**；
+3. 点 **试听**——听到你的音色朗读测试句，安装即成功。
+
+> 「试听」按钮会调用一次真实合成，一次验证 Key、音色与网络代理配置是否就绪。
 
 ## 配置
 

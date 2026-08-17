@@ -87,10 +87,12 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
 
 1. Open **Settings → Voice (Fish TTS)**;
 2. Fill in your **API key** and voice **`reference_id`**;
-3. Click **Test** — hearing the test sentence in your voice means the install works.
+3. Click **Save settings** (the API key status turns "configured");
+4. Click **Test** — hearing the test sentence in your voice means the install works.
 
 > The **Test** button performs one real synthesis and verifies the key, the voice and
-> the proxy configuration in a single click.
+> the proxy configuration in a single click. It stays disabled while the settings are
+> unsaved or the voice is empty.
 
 ## Configuration
 

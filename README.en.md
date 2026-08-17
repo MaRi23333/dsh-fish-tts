@@ -48,6 +48,23 @@ bilingual (English / 中文, follows the DSH locale).
   - HTTP proxy (e.g. `http://127.0.0.1:7890`, leave empty for direct)
   - Test clip, auto-read toggle, volume slider (default 60%)
 
+## Screenshots
+
+<p align="center">
+  <img src="./assets/readme/screenshot-read-aloud.png" width="75%" alt="Read-aloud button in the message action strip" />
+  <em>The "Read aloud" button in the message action strip</em>
+</p>
+
+<p align="center">
+  <img src="./assets/readme/screenshot-auto-read.png" width="75%" alt="Auto-read toggle in the composer" />
+  <em>The auto-read toggle in the composer tool row</em>
+</p>
+
+<p align="center">
+  <img src="./assets/readme/screenshot-settings.png" width="75%" alt="Voice (TTS) settings page" />
+  <em>Settings page: model / voice / API key / proxy / test</em>
+</p>
+
 ## Install
 
 ```sh

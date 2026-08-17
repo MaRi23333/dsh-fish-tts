@@ -44,6 +44,23 @@
   - 试听按钮、自动朗读开关、音量滑条（默认 60%）
 - **双语界面**（中文 / English，跟随 DSH 语言设置；en 词条与 zh 完全对齐）。
 
+## 界面截图
+
+<p align="center">
+  <img src="./assets/readme/screenshot-read-aloud.png" width="75%" alt="消息操作条上的朗读按钮" />
+  <em>消息操作条上的「朗读」按钮</em>
+</p>
+
+<p align="center">
+  <img src="./assets/readme/screenshot-auto-read.png" width="75%" alt="输入栏的自动朗读开关" />
+  <em>输入栏的自动朗读开关</em>
+</p>
+
+<p align="center">
+  <img src="./assets/readme/screenshot-settings.png" width="75%" alt="语音合成设置页（模型 / 音色 / API Key / 代理）" />
+  <em>设置页：模型 / 音色 / API Key / 代理 / 试听</em>
+</p>
+
 ## 安装
 
 ```sh

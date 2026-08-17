@@ -51,17 +51,17 @@ bilingual (English / 中文, follows the DSH locale).
 ## Screenshots
 
 <p align="center">
-  <img src="./assets/readme/screenshot-read-aloud.png" width="75%" alt="Read-aloud button in the message action strip" />
+  <img src="./assets/readme/screenshot-read-aloud.png" width="75%" alt="Read-aloud button in the message action strip" /><br>
   <em>The "Read aloud" button in the message action strip</em>
 </p>
 
 <p align="center">
-  <img src="./assets/readme/screenshot-auto-read.png" width="75%" alt="Auto-read toggle in the composer" />
+  <img src="./assets/readme/screenshot-auto-read.png" width="75%" alt="Auto-read toggle in the composer" /><br>
   <em>The auto-read toggle in the composer tool row</em>
 </p>
 
 <p align="center">
-  <img src="./assets/readme/screenshot-settings.png" width="75%" alt="Voice (TTS) settings page" />
+  <img src="./assets/readme/screenshot-settings.png" width="75%" alt="Voice (TTS) settings page" /><br>
   <em>Settings page: model / voice / API key / proxy / test</em>
 </p>
 

@@ -86,6 +86,15 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh t
 > The repo commits `lib/` build artifacts, so git installs need no local build; after
 > changing sources run `pnpm run build` and restart.
 
+> **Switching from the GitHub install to npm:** a bare `add dsh-fish-tts` is a silent
+> no-op when the git version is already installed (pnpm considers the same-name
+> dependency satisfied). Use `dsh plugin --profile web add dsh-fish-tts@latest`
+> instead, or `remove` first and then `add`.
+
+> When installing a freshly published npm version, pnpm's supply-chain protection may
+> automatically add `minimumReleaseAgeExclude: [dsh-fish-tts@…]` to the profile's
+> `pnpm-workspace.yaml`. This is expected and harmless.
+
 ### Verify the install
 
 1. Open **Settings → Voice (Fish TTS)**;

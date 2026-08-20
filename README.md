@@ -81,6 +81,10 @@ dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 
 > 仓库已提交 `lib/` 构建产物，git 安装无需本地构建；改源码后运行 `pnpm run build` 再重启即可。
 
+> **从 GitHub 版换到 npm 源**：裸包名 `add dsh-fish-tts` 对已装的 git 版是静默空操作（pnpm 判定同名依赖已满足）。请改用 `dsh plugin --profile web add dsh-fish-tts@latest`，或先 `remove` 再 `add`。
+
+> 安装刚发布的 npm 版本时，pnpm 的供应链保护可能自动在 profile 的 `pnpm-workspace.yaml` 写入 `minimumReleaseAgeExclude: [dsh-fish-tts@…]`，属正常行为，不影响使用。
+
 ### 安装后验证
 
 1. 打开 **Settings → 语音朗读**（Voice (Fish TTS)）；

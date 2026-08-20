@@ -67,28 +67,33 @@ bilingual (English / 中文, follows the DSH locale).
 
 ## Install
 
+One command, from npm (recommended):
+
 ```sh
-# From npm (recommended, package name dsh-fish-tts)
-dsh plugin --profile web add dsh-fish-tts
+npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts
+```
 
-# Or from GitHub (git-hosted plugins build on install)
-dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
+Then **restart `dsh web`** (stop the process, run `dsh web` again), refresh the page, and open **Settings → Voice (Fish TTS)**.
 
-# Or from a local checkout
+Other install sources:
+
+```sh
+# From GitHub (git-hosted plugins build on install)
+npx @deepseek-ai/dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
+
+# From a local checkout
 git clone https://github.com/MaRi23333/dsh-fish-tts.git
 cd dsh-fish-tts
 pnpm install && pnpm run build
-dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
+npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ```
-
-Then **restart `dsh web`** (stop the process, run `dsh web` again) and refresh the page.
 
 > The repo commits `lib/` build artifacts, so git installs need no local build; after
 > changing sources run `pnpm run build` and restart.
 
 > **Switching from the GitHub install to npm:** a bare `add dsh-fish-tts` is a silent
 > no-op when the git version is already installed (pnpm considers the same-name
-> dependency satisfied). Use `dsh plugin --profile web add dsh-fish-tts@latest`
+> dependency satisfied). Use `npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts@latest`
 > instead, or `remove` first and then `add`.
 
 > When installing a freshly published npm version, pnpm's supply-chain protection may

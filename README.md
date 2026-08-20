@@ -63,25 +63,30 @@
 
 ## 安装
 
+一条命令，从 npm 安装（推荐）：
+
 ```sh
-# 从 npm 安装（推荐，包名 dsh-fish-tts）
-dsh plugin --profile web add dsh-fish-tts
+npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts
+```
 
-# 或从 GitHub 安装（git-hosted 插件会在安装时构建）
-dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
+然后**重启 dsh web**（关掉终端重新运行 `dsh web`）并刷新页面，打开 **Settings → 语音朗读**。
 
-# 或从本地目录安装
+其他安装方式：
+
+```sh
+# 从 GitHub 安装（git-hosted 插件会在安装时构建）
+npx @deepseek-ai/dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
+
+# 从本地目录安装
 git clone https://github.com/MaRi23333/dsh-fish-tts.git
 cd dsh-fish-tts
 pnpm install && pnpm run build
-dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
+npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ```
-
-然后**重启 dsh web**（关掉终端重新运行 `dsh web`）并刷新页面。
 
 > 仓库已提交 `lib/` 构建产物，git 安装无需本地构建；改源码后运行 `pnpm run build` 再重启即可。
 
-> **从 GitHub 版换到 npm 源**：裸包名 `add dsh-fish-tts` 对已装的 git 版是静默空操作（pnpm 判定同名依赖已满足）。请改用 `dsh plugin --profile web add dsh-fish-tts@latest`，或先 `remove` 再 `add`。
+> **从 GitHub 版换到 npm 源**：裸包名 `add dsh-fish-tts` 对已装的 git 版是静默空操作（pnpm 判定同名依赖已满足）。请改用 `npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts@latest`，或先 `remove` 再 `add`。
 
 > 安装刚发布的 npm 版本时，pnpm 的供应链保护可能自动在 profile 的 `pnpm-workspace.yaml` 写入 `minimumReleaseAgeExclude: [dsh-fish-tts@…]`，属正常行为，不影响使用。
 

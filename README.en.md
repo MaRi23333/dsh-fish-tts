@@ -68,7 +68,10 @@ bilingual (English / 中文, follows the DSH locale).
 ## Install
 
 ```sh
-# From GitHub (git-hosted plugins build on install)
+# From npm (recommended, package name dsh-fish-tts)
+dsh plugin --profile web add dsh-fish-tts
+
+# Or from GitHub (git-hosted plugins build on install)
 dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
 
 # Or from a local checkout

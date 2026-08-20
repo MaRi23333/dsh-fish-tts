@@ -64,7 +64,10 @@
 ## 安装
 
 ```sh
-# 从 GitHub 安装（git-hosted 插件会在安装时构建）
+# 从 npm 安装（推荐，包名 dsh-fish-tts）
+dsh plugin --profile web add dsh-fish-tts
+
+# 或从 GitHub 安装（git-hosted 插件会在安装时构建）
 dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
 
 # 或从本地目录安装

@@ -9,7 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
   <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
-  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.0--rc.6-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.0-rc.6" />
+  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.1--rc.1-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.1-rc.1" />
 </p>
 
 > **English:** dsh-fish-tts is a third-party **TTS plugin** for the
@@ -149,7 +149,7 @@ pnpm run check:pack # npm pack 内容白名单校验
 
 - host 侧在 `src/index.ts`（Node，注册 `/fish-tts/*` 路由与设置存储）
 - client 侧在 `src/client/`（React，注册 `conversation.chat.assistant-actions`、`conversation.input.left`、`settings.section` 三个 slot）
-- 依赖 DSH `0.1.0-rc.6` 的运行时 API；其他版本如接口漂移请对照 [deepseek-harness 仓库](https://github.com/deepseek-ai/deepseek-harness) 相应 tag 调整。
+- 运行时 API 构建基线为 DSH `0.1.0-rc.6`，已在 `0.1.1-rc.1` 实测正常（无接口漂移）；其他版本如接口漂移请对照 [deepseek-harness 仓库](https://github.com/deepseek-ai/deepseek-harness) 相应 tag 调整。
 
 ## License
 

@@ -94,7 +94,7 @@ export function apply(ctx: ClientContext): void {
       inject: (): FishTtsActionInjected => ({
         play: text => player.play(text, replacements()),
         stop: () => player.stop(),
-        playing: () => player.playing,
+        playingFor: text => player.playingFor(text),
         autoPlayEnabled,
         loadTime,
         played,

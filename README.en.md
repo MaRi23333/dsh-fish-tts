@@ -33,7 +33,9 @@ bilingual (English / 中文, follows the DSH locale).
 
 - **Read-aloud action**: every finalized assistant message gets a speaker button in its
   action strip (same icon style as the native actions). Click to synthesize and play that
-  reply; **click again while playing to stop** (no restart from the top). Markdown is
+  reply; **click the same message's button again while playing to stop** (no restart from
+  the top), clicking another message's button switches playback straight over, and a
+  second click while synthesis is still in flight cancels it. Markdown is
   cleaned before speaking: paths, URLs, long ids and code blocks are
   replaced with placeholders instead of being read out.
 - **Auto-read**: a small speaker toggle in the composer tool row (synced with the settings

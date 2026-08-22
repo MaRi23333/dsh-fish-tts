@@ -86,6 +86,24 @@ test('a corrupt stored value falls back to 1x', () => {
   }
 })
 
+test('empty or out-of-range stored values fall back to 1x (never 0.5x)', () => {
+  const store = new Map<string, string>()
+  const restore = installStorage(store)
+  try {
+    for (const bad of ['', '   ', '0', '0.2', '3', '-1', 'Infinity', 'NaN']) {
+      store.set(SPEED_KEY, bad)
+      assert.equal(getSpeed(), 1, `stored ${JSON.stringify(bad)} must fall back to 1x`)
+    }
+    // in-range values still read back as stored
+    for (const good of ['0.5', '1.25', '2']) {
+      store.set(SPEED_KEY, good)
+      assert.equal(getSpeed(), Number(good), `stored ${good} must be honoured`)
+    }
+  } finally {
+    restore()
+  }
+})
+
 test('broken storage: reads fall back to 1x, writes never throw', () => {
   const previous = globalAny()['window']
   globalAny()['window'] = {
@@ -125,10 +143,11 @@ test('speedSupported requires preservesPitch on the prototype', () => {
 test('applySpeed leaves the clip at 1x where pitch preservation is missing', () => {
   const restoreStorage = installStorage(new Map([[SPEED_KEY, '1.5']]))
   const restoreAudio = installAudioElement({ playbackRate: true })
-  const clip = { preservesPitch: false, playbackRate: 1 } as unknown as HTMLAudioElement
+  const clip = { preservesPitch: false, playbackRate: 1, defaultPlaybackRate: 1 } as unknown as HTMLAudioElement
   try {
     applySpeed(clip)
     assert.equal(clip.playbackRate, 1, 'rate must stay at 1x without preservesPitch')
+    assert.equal(clip.defaultPlaybackRate, 1, 'default rate must stay at 1x too')
     assert.equal(clip.preservesPitch, false)
   } finally {
     restoreAudio()
@@ -136,13 +155,14 @@ test('applySpeed leaves the clip at 1x where pitch preservation is missing', () 
   }
 })
 
-test('applySpeed sets rate and pitch preservation where supported', () => {
+test('applySpeed sets live and default rate plus pitch preservation', () => {
   const restoreStorage = installStorage(new Map([[SPEED_KEY, '1.5']]))
   const restoreAudio = installAudioElement({ playbackRate: true, preservesPitch: true })
-  const clip = { preservesPitch: false, playbackRate: 1 } as unknown as HTMLAudioElement
+  const clip = { preservesPitch: false, playbackRate: 1, defaultPlaybackRate: 1 } as unknown as HTMLAudioElement
   try {
     applySpeed(clip)
     assert.equal(clip.playbackRate, 1.5)
+    assert.equal(clip.defaultPlaybackRate, 1.5, 'default rate is set so metadata load cannot reset to 1x')
     assert.equal(clip.preservesPitch, true)
   } finally {
     restoreAudio()

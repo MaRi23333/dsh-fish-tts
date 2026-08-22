@@ -15,10 +15,10 @@ import type { FishTtsKey } from './locales.ts'
 export interface FishTtsActionInjected {
   /** Synthesize and play one reply text. */
   play: (text: string) => Promise<void>
-  /** Stop whatever is playing. */
+  /** Stop whatever is playing and cancel any in-flight synthesis. */
   stop: () => void
-  /** Whether audio is currently playing. */
-  playing: () => boolean
+  /** Whether the clip belonging to the given source text is playing. */
+  playingFor: (text: string) => boolean
   /** Whether auto-play of new replies is enabled. */
   autoPlayEnabled: () => boolean
   /** Page-load timestamp used to fence auto-play to genuinely new replies. */
@@ -82,7 +82,7 @@ function selectTime(snapshot: { nodes: readonly unknown[] }, messageId: MessageI
 }
 
 export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | null {
-  const { messageId, useSession, play, stop, playing, autoPlayEnabled, loadTime, played, t } = props
+  const { messageId, useSession, play, stop, playingFor, autoPlayEnabled, loadTime, played, t } = props
   const text = useSession(snapshot => selectText(snapshot as never, messageId))
   const isLatest = useSession(snapshot => selectIsLatest(snapshot as never, messageId))
   const time = useSession(snapshot => selectTime(snapshot as never, messageId))
@@ -93,11 +93,11 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
   const alive = useRef(true)
   useEffect(() => () => { alive.current = false }, [])
   useEffect(() => {
-    const tick = (): void => { if (alive.current) setIsPlaying(playing()) }
+    const tick = (): void => { if (alive.current) setIsPlaying(playingFor(text)) }
     tick()
     const timer = window.setInterval(tick, 400)
     return () => { window.clearInterval(timer) }
-  }, [playing])
+  }, [playingFor, text])
 
   // Auto-play: only for the latest finalized reply, only when it arrived after
   // this page loaded, and only once per message id.
@@ -112,10 +112,15 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
   if (text.trim() === '') return null
 
   const onSpeak = (): void => {
-    if (busy) return
-    // Toggle: a click while audio is playing stops playback instead of
-    // restarting the clip from the top.
-    if (playing()) {
+    // A click during this button's in-flight synthesis cancels it.
+    if (busy) {
+      stop()
+      setBusy(false)
+      return
+    }
+    // Toggle: a click while this message's clip plays stops it; a click on
+    // another message's button switches playback straight over to it.
+    if (playingFor(text)) {
       stop()
       setIsPlaying(false)
       return
@@ -123,7 +128,12 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
     setBusy(true)
     setFailure(null)
     void play(text).then(
-      () => { if (alive.current) setBusy(false) },
+      () => {
+        if (!alive.current) return
+        setBusy(false)
+        // false when this play was cancelled or superseded before it started
+        setIsPlaying(playingFor(text))
+      },
       (error: Error & { code?: string }) => {
         if (!alive.current) return
         setBusy(false)
@@ -136,16 +146,15 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
     <>
       <button
         type="button"
-        aria-label={isPlaying ? t('action.stop') : t('action.speak.aria')}
+        aria-label={isPlaying || busy ? t('action.stop') : t('action.speak.aria')}
         data-active={isPlaying || undefined}
-        title={failure ?? (isPlaying ? t('action.stop') : t('action.speak'))}
-        disabled={busy}
+        title={failure ?? (isPlaying || busy ? t('action.stop') : t('action.speak'))}
         onClick={onSpeak}
         style={{
           background: 'none',
           border: 'none',
           padding: '0 2px',
-          cursor: busy ? 'default' : 'pointer',
+          cursor: 'pointer',
           opacity: busy ? 0.55 : 1,
           display: 'inline-flex',
           alignItems: 'center',
@@ -156,7 +165,7 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
           color: failure !== null ? 'var(--dsh-color-danger, #e5484d)' : '#7a7a7a',
         }}
       >
-        <SpeakerIcon playing={isPlaying} />
+        <SpeakerIcon playing={isPlaying || busy} />
       </button>
     </>
   )

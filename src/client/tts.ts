@@ -49,7 +49,8 @@ export function setVolume(value: number): void {
     const clamped = Math.min(1, Math.max(0, value))
     window.localStorage.setItem(VOLUME_KEY, String(clamped))
   } catch {
-    // storage unavailable; the caller's value applies for the current clip only
+    // storage write failed: the preference is not persisted and the next
+    // clip keeps the previously stored value
   }
 }
 
@@ -77,9 +78,12 @@ export function speedSupported(): boolean {
 export function getSpeed(): number {
   try {
     const raw = window.localStorage.getItem(SPEED_KEY)
-    if (raw === null) return DEFAULT_SPEED
+    if (raw === null || raw.trim() === '') return DEFAULT_SPEED
     const value = Number(raw)
-    return Number.isFinite(value) ? Math.min(MAX_SPEED, Math.max(MIN_SPEED, value)) : DEFAULT_SPEED
+    // setSpeed only ever stores in-range values; anything else (non-numeric,
+    // empty, out of range) is corruption or manual tampering — fall back to 1x.
+    if (!Number.isFinite(value) || value < MIN_SPEED || value > MAX_SPEED) return DEFAULT_SPEED
+    return value
   } catch {
     return DEFAULT_SPEED
   }
@@ -90,7 +94,8 @@ export function setSpeed(value: number): void {
     const clamped = Math.min(MAX_SPEED, Math.max(MIN_SPEED, value))
     window.localStorage.setItem(SPEED_KEY, String(clamped))
   } catch {
-    // storage unavailable; the caller's value applies for the next clip only
+    // storage write failed: the preference is not persisted and the next
+    // clip keeps the previously stored value
   }
 }
 
@@ -102,7 +107,11 @@ export function setSpeed(value: number): void {
 export function applySpeed(audio: HTMLAudioElement): void {
   if (!speedSupported()) return
   audio.preservesPitch = true
-  audio.playbackRate = getSpeed()
+  // defaultPlaybackRate covers UAs that reset the live rate when the source
+  // metadata loads; playbackRate is what play() actually uses.
+  const speed = getSpeed()
+  audio.defaultPlaybackRate = speed
+  audio.playbackRate = speed
 }
 
 /** Spoken placeholder words for un-speakable tokens, per locale. */
@@ -156,9 +165,13 @@ export function cleanForTts(text: string, repl: TtsReplacements = REPL_EN): stri
 export class FishTtsPlayer {
   private current: HTMLAudioElement | null = null
   private currentUrl: string | null = null
+  private currentText: string | null = null
+  /** Generation counter; stop() and each play() bump it to invalidate
+   *  in-flight synthesis, so a superseded fetch result never starts audio. */
+  private playToken = 0
 
-  /** Stop whatever is playing and release its blob URL. */
-  stop(): void {
+  /** Pause the current clip and release its blob URL (no token bump). */
+  private halt(): void {
     if (this.current !== null) {
       this.current.pause()
       this.current = null
@@ -167,10 +180,22 @@ export class FishTtsPlayer {
       URL.revokeObjectURL(this.currentUrl)
       this.currentUrl = null
     }
+    this.currentText = null
+  }
+
+  /** Stop whatever is playing and cancel any in-flight synthesis. */
+  stop(): void {
+    this.playToken += 1
+    this.halt()
   }
 
   get playing(): boolean {
     return this.current !== null && !this.current.paused && !this.current.ended
+  }
+
+  /** Whether the clip currently playing belongs to the given source text. */
+  playingFor(text: string): boolean {
+    return this.playing && this.currentText === text
   }
 
   /**
@@ -181,6 +206,7 @@ export class FishTtsPlayer {
   async play(text: string, repl: TtsReplacements = REPL_EN): Promise<void> {
     const cleaned = cleanForTts(text, repl)
     if (cleaned === '') return
+    const token = ++this.playToken
     const response = await fetch('/fish-tts/synthesize', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -201,8 +227,10 @@ export class FishTtsPlayer {
       throw error
     }
     const blob = await response.blob()
+    // A stop() or a newer play() arrived while synthesizing: discard silently.
+    if (token !== this.playToken) return
     const url = URL.createObjectURL(blob)
-    this.stop()
+    this.halt()
     const audio = new Audio(url)
     audio.volume = getVolume()
     // Speed applies per new clip (consistent with volume): a settings change
@@ -210,9 +238,11 @@ export class FishTtsPlayer {
     applySpeed(audio)
     this.current = audio
     this.currentUrl = url
+    this.currentText = text
     audio.addEventListener('ended', () => {
       if (this.current === audio) {
         this.current = null
+        this.currentText = null
         URL.revokeObjectURL(url)
         if (this.currentUrl === url) this.currentUrl = null
       }
@@ -222,6 +252,7 @@ export class FishTtsPlayer {
     } catch (error) {
       if (this.current === audio) {
         this.current = null
+        this.currentText = null
         URL.revokeObjectURL(url)
         if (this.currentUrl === url) this.currentUrl = null
       }

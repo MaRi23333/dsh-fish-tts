@@ -277,7 +277,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
               min={0.5}
               max={2}
               step={0.25}
-              value={spd}
+              value={speedOk ? spd : 1}
               disabled={!speedOk}
               aria-label={t('settings.speed')}
               onChange={(event) => {
@@ -287,7 +287,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
               }}
               style={{ width: '140px' }}
             />
-            <span style={{ fontSize: '12px', opacity: 0.75, minWidth: '34px' }}>{Number(spd.toFixed(2))}×</span>
+            <span style={{ fontSize: '12px', opacity: 0.75, minWidth: '34px' }}>{Number((speedOk ? spd : 1).toFixed(2))}×</span>
           </div>
         </div>
         {!speedOk && (

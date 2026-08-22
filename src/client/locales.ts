@@ -34,6 +34,8 @@ export type FishTtsKey =
   | 'settings.autoplay'
   | 'settings.autoplay.hint'
   | 'settings.volume'
+  | 'settings.speed'
+  | 'settings.speed.unsupported'
   | 'settings.test'
   | 'settings.test.playing'
   | 'settings.sourceHint'
@@ -73,6 +75,8 @@ export const zh: Record<FishTtsKey, string> = {
   'settings.autoplay': '新回复自动朗读',
   'settings.autoplay.hint': '仅自动朗读页面打开后产生的新回复，不会重播历史消息。',
   'settings.volume': '音量',
+  'settings.speed': '播放速度',
+  'settings.speed.unsupported': '当前浏览器不支持倍速播放，已固定为 1×',
   'settings.test': '试听',
   'settings.test.playing': '正在播放测试语音…',
   'settings.sourceHint': '设置保存在本机 $DSH_HOME/fish-tts/，API Key 使用 AES-256-GCM 加密存储。',
@@ -107,6 +111,8 @@ export const en: Record<FishTtsKey, string> = {
   'settings.autoplay': 'Read new replies automatically',
   'settings.autoplay.hint': 'Only replies that arrive after this page loaded are read automatically; history is never replayed.',
   'settings.volume': 'Volume',
+  'settings.speed': 'Playback speed',
+  'settings.speed.unsupported': 'This browser does not support pitch-preserving speed control; playback stays at 1×',
   'settings.test': 'Test',
   'settings.test.playing': 'Playing test audio…',
   'settings.sourceHint': 'Settings live in $DSH_HOME/fish-tts/ on this machine; the API key is encrypted with AES-256-GCM.',

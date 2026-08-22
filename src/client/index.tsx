@@ -17,7 +17,7 @@ import type { MessageId } from '@deepseek-ai/dsh-client-connection/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-import { FishTtsPlayer, getVolume, setVolume, REPL_EN, REPL_ZH, type TtsReplacements } from './tts.ts'
+import { FishTtsPlayer, getVolume, setVolume, getSpeed, setSpeed, speedSupported, REPL_EN, REPL_ZH, type TtsReplacements } from './tts.ts'
 import { FishTtsActions, type FishTtsActionInjected } from './FishTtsActions.tsx'
 import { FishTtsInputToggle, type FishTtsInputToggleInjected } from './FishTtsInputToggle.tsx'
 import { FishTtsSettings, type FishTtsSettingsInjected } from './FishTtsSettings.tsx'
@@ -130,6 +130,9 @@ export function apply(ctx: ClientContext): void {
         subscribeAutoPlay,
         volume: getVolume,
         setVolume,
+        speed: getSpeed,
+        setSpeed,
+        speedSupported,
         config: () => player.config(),
         saveConfig: patch => player.saveConfig(patch),
         models: () => player.models(),

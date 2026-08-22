@@ -18,6 +18,9 @@ export interface FishTtsSettingsInjected {
   subscribeAutoPlay: (fn: () => void) => () => void
   volume: () => number
   setVolume: (value: number) => void
+  speed: () => number
+  setSpeed: (value: number) => void
+  speedSupported: () => boolean
   config: () => Promise<TtsConfig>
   saveConfig: (patch: {
     model?: string
@@ -35,7 +38,7 @@ export type FishTtsSettingsProps =
   & InjectFace<FishTtsSettingsInjected>
 
 export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement {
-  const { t, test, playing, autoPlay, setAutoPlay, subscribeAutoPlay, volume, setVolume, config, saveConfig, models } = props
+  const { t, test, playing, autoPlay, setAutoPlay, subscribeAutoPlay, volume, setVolume, speed, setSpeed, speedSupported, config, saveConfig, models } = props
 
   const [model, setModel] = useState('')
   const [voice, setVoice] = useState('')
@@ -48,6 +51,8 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
   const [saveError, setSaveError] = useState<string | null>(null)
   const [enabled, setEnabled] = useState(autoPlay())
   const [vol, setVol] = useState(volume())
+  const [spd, setSpd] = useState(speed())
+  const speedOk = speedSupported()
   const [testing, setTesting] = useState(false)
   const alive = useRef(true)
   useEffect(() => () => { alive.current = false }, [])
@@ -261,6 +266,33 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
           />
           <span style={{ fontSize: '12px', opacity: 0.75, minWidth: '34px' }}>{Math.round(vol * 100)}%</span>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={rowStyle}>
+          <span style={labelStyle}>{t('settings.speed')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.25}
+              value={spd}
+              disabled={!speedOk}
+              aria-label={t('settings.speed')}
+              onChange={(event) => {
+                const next = Number(event.target.value)
+                setSpd(next)
+                setSpeed(next)
+              }}
+              style={{ width: '140px' }}
+            />
+            <span style={{ fontSize: '12px', opacity: 0.75, minWidth: '34px' }}>{Number(spd.toFixed(2))}×</span>
+          </div>
+        </div>
+        {!speedOk && (
+          <span style={{ ...hintStyle, marginLeft: '108px' }}>{t('settings.speed.unsupported')}</span>
+        )}
       </div>
 
       <div style={{ ...rowStyle, justifyContent: 'flex-start' }}>

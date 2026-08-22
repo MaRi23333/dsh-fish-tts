@@ -53,6 +53,58 @@ export function setVolume(value: number): void {
   }
 }
 
+/** Browser-local playback speed (0.5..2.0), applied per new clip. */
+const SPEED_KEY = 'fish-tts.speed'
+const DEFAULT_SPEED = 1
+const MIN_SPEED = 0.5
+const MAX_SPEED = 2
+
+/**
+ * Whether pitch-preserving rate control is available. Modern browsers all
+ * ship `preservesPitch` (defaulting to true); where it is missing the
+ * settings row is disabled and playback stays at 1x rather than chipmunking.
+ */
+export function speedSupported(): boolean {
+  try {
+    return typeof HTMLAudioElement !== 'undefined'
+      && 'playbackRate' in HTMLAudioElement.prototype
+      && 'preservesPitch' in HTMLAudioElement.prototype
+  } catch {
+    return false
+  }
+}
+
+export function getSpeed(): number {
+  try {
+    const raw = window.localStorage.getItem(SPEED_KEY)
+    if (raw === null) return DEFAULT_SPEED
+    const value = Number(raw)
+    return Number.isFinite(value) ? Math.min(MAX_SPEED, Math.max(MIN_SPEED, value)) : DEFAULT_SPEED
+  } catch {
+    return DEFAULT_SPEED
+  }
+}
+
+export function setSpeed(value: number): void {
+  try {
+    const clamped = Math.min(MAX_SPEED, Math.max(MIN_SPEED, value))
+    window.localStorage.setItem(SPEED_KEY, String(clamped))
+  } catch {
+    // storage unavailable; the caller's value applies for the next clip only
+  }
+}
+
+/**
+ * Apply the stored playback rate to a fresh clip. Pitch preservation is
+ * requested explicitly; where the browser lacks it the rate stays at the
+ * default 1x rather than chipmunking.
+ */
+export function applySpeed(audio: HTMLAudioElement): void {
+  if (!speedSupported()) return
+  audio.preservesPitch = true
+  audio.playbackRate = getSpeed()
+}
+
 /** Spoken placeholder words for un-speakable tokens, per locale. */
 export interface TtsReplacements {
   link: string
@@ -153,6 +205,9 @@ export class FishTtsPlayer {
     this.stop()
     const audio = new Audio(url)
     audio.volume = getVolume()
+    // Speed applies per new clip (consistent with volume): a settings change
+    // takes effect on the next play. Unsupported browsers stay at 1x.
+    applySpeed(audio)
     this.current = audio
     this.currentUrl = url
     audio.addEventListener('ended', () => {

@@ -46,7 +46,8 @@ bilingual (English / 中文, follows the DSH locale).
     machine; `key.bin` is generated once and ACL-tightened on Windows; the key never
     appears in any GET response, log line or the repository)
   - HTTP proxy (e.g. `http://127.0.0.1:7890`, leave empty for direct)
-  - Test clip, auto-read toggle, volume slider (default 60%)
+  - Test clip, auto-read toggle, volume slider (default 60%), playback-speed slider
+    (0.5–2.0×, pitch-preserving; fixed at 1× where the browser lacks support)
 
 ## Screenshots
 

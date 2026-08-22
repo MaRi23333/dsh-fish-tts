@@ -8,6 +8,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 export type FishTtsKey =
   | 'action.speak'
   | 'action.speak.aria'
+  | 'action.stop'
   | 'action.playing'
   | 'action.failed'
   | 'error.voiceRequired'
@@ -49,6 +50,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 export const zh: Record<FishTtsKey, string> = {
   'action.speak': '朗读',
   'action.speak.aria': '朗读这条回复',
+  'action.stop': '停止',
   'action.playing': '播放中…',
   'action.failed': '语音合成失败',
   'error.voiceRequired': '请先在设置页填写音色 ID',
@@ -85,6 +87,7 @@ export const zh: Record<FishTtsKey, string> = {
 export const en: Record<FishTtsKey, string> = {
   'action.speak': 'Read aloud',
   'action.speak.aria': 'Read this reply aloud',
+  'action.stop': 'Stop',
   'action.playing': 'Playing…',
   'action.failed': 'Speech synthesis failed',
   'error.voiceRequired': 'Set a voice reference_id in the settings page first',

@@ -15,6 +15,8 @@ import type { FishTtsKey } from './locales.ts'
 export interface FishTtsActionInjected {
   /** Synthesize and play one reply text. */
   play: (text: string) => Promise<void>
+  /** Stop whatever is playing. */
+  stop: () => void
   /** Whether audio is currently playing. */
   playing: () => boolean
   /** Whether auto-play of new replies is enabled. */
@@ -80,7 +82,7 @@ function selectTime(snapshot: { nodes: readonly unknown[] }, messageId: MessageI
 }
 
 export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | null {
-  const { messageId, useSession, play, playing, autoPlayEnabled, loadTime, played, t } = props
+  const { messageId, useSession, play, stop, playing, autoPlayEnabled, loadTime, played, t } = props
   const text = useSession(snapshot => selectText(snapshot as never, messageId))
   const isLatest = useSession(snapshot => selectIsLatest(snapshot as never, messageId))
   const time = useSession(snapshot => selectTime(snapshot as never, messageId))
@@ -111,6 +113,13 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
 
   const onSpeak = (): void => {
     if (busy) return
+    // Toggle: a click while audio is playing stops playback instead of
+    // restarting the clip from the top.
+    if (playing()) {
+      stop()
+      setIsPlaying(false)
+      return
+    }
     setBusy(true)
     setFailure(null)
     void play(text).then(
@@ -127,9 +136,9 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
     <>
       <button
         type="button"
-        aria-label={t('action.speak.aria')}
+        aria-label={isPlaying ? t('action.stop') : t('action.speak.aria')}
         data-active={isPlaying || undefined}
-        title={failure ?? t('action.speak')}
+        title={failure ?? (isPlaying ? t('action.stop') : t('action.speak'))}
         disabled={busy}
         onClick={onSpeak}
         style={{

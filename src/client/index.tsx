@@ -93,6 +93,7 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
       inject: (): FishTtsActionInjected => ({
         play: text => player.play(text, replacements()),
+        stop: () => player.stop(),
         playing: () => player.playing,
         autoPlayEnabled,
         loadTime,

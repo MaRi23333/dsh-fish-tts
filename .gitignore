@@ -11,3 +11,7 @@ coverage/
 # Internal handoff doc (HANDOFF.md) stays out of the published repo:
 # it contains local machine paths. Keep the file on disk for local dev.
 HANDOFF.md
+
+# Internal dev docs (DEVELOPMENT-NOTES.md / IMPLEMENTATION.md) stay local too:
+# accumulated team experience and implementation notes, not for the public repo.
+docs/

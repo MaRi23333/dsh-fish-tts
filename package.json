@@ -1,6 +1,6 @@
 {
   "name": "dsh-fish-tts",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Text-to-speech (TTS) plugin for DeepSeek Harness — Fish Audio API only, bring your own key. Per-message read-aloud, auto-read toggle in the composer, settings for model / voice / encrypted API key / proxy. Third-party, not affiliated with Fish Audio.",
   "keywords": [
     "deepseek-harness",
@@ -65,11 +65,11 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1",
     "undici": "^7.0.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/schemastery": "^3.0.0"
+    "@deepseek-ai/cordis": "^4.0.1"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
@@ -80,7 +80,6 @@
     "@deepseek-ai/dsh-client-ui-settings": "0.1.0-rc.6",
     "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.6",
     "@deepseek-ai/dsh-host-webserver": "0.1.0-rc.6",
-    "@deepseek-ai/schemastery": "^3.0.0",
     "@types/node": "^26.2.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",

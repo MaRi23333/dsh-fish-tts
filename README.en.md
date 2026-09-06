@@ -9,7 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
   <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
-  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.1--rc.1-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.1-rc.1" />
+  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.2--rc.1-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.2-rc.1" />
 </p>
 
 A third-party **text-to-speech (TTS) plugin** for the
@@ -179,7 +179,7 @@ pnpm run check:pack # npm pack content whitelist check
 - Client side lives in `src/client/` (React; registers the
   `conversation.chat.assistant-actions`, `conversation.input.left` and
   `settings.section` slots).
-- Built against the DSH `0.1.0-rc.6` runtime API and verified working on `0.1.1-rc.1`
+- Adapted and verified for the DSH `0.1.2-rc.1` session API and UI icon changes
   (no API drift); if the API drifts on other versions, align
   with the matching tag of the [deepseek-harness repo](https://github.com/deepseek-ai/deepseek-harness).
 

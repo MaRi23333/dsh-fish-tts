@@ -1,13 +1,16 @@
 /**
  * Per-message "朗读" entry in the assistant-message action strip.
- * Owner supplies the finalized messageId; the session standard kit supplies
- * useSession, through which the message text and the "latest message" bit are
- * derived from the live ConversationSnapshot. Selectors return primitives only
- * (string/boolean/number) because uSES requires value-stable selections.
+ * Owner supplies the finalized messageId; the chat session kit supplies
+ * useChat, through which the message text and the "latest message" bit are
+ * derived from the live ChatSnapshot (legacy nodes projection keeps the
+ * pre-0.1.2 ConversationSnapshot field semantics for text/order/timing).
+ * Selectors return primitives only (string/boolean/number) because uSES
+ * requires value-stable selections.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { MessageId } from '@deepseek-ai/dsh-client-connection/client'
 import type { PropsLocale, PropsRuntime, InjectFace } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { SpeakerIcon } from './icons.tsx'
 import type { FishTtsKey } from './locales.ts'
@@ -82,10 +85,14 @@ function selectTime(snapshot: { nodes: readonly unknown[] }, messageId: MessageI
 }
 
 export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | null {
-  const { messageId, useSession, play, stop, playingFor, autoPlayEnabled, loadTime, played, t } = props
-  const text = useSession(snapshot => selectText(snapshot as never, messageId))
-  const isLatest = useSession(snapshot => selectIsLatest(snapshot as never, messageId))
-  const time = useSession(snapshot => selectTime(snapshot as never, messageId))
+  const { messageId, useChat, play, stop, playingFor, autoPlayEnabled, loadTime, played, t } = props
+  // The chat session kit injects useChat (SnapshotSelectorHook<ChatSnapshot>);
+  // its legacy projection keeps the pre-0.1.2 ConversationSnapshot.node shape,
+  // so the text/order/timing selectors below stay unchanged. Every selector
+  // returns a primitive for uSES value-stable selection.
+  const text = useChat(s => selectText({ nodes: s.legacy.nodes }, messageId))
+  const isLatest = useChat(s => selectIsLatest({ nodes: s.legacy.nodes }, messageId))
+  const time = useChat(s => selectTime({ nodes: s.legacy.nodes }, messageId))
 
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)

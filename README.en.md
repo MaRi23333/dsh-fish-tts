@@ -179,8 +179,8 @@ pnpm run check:pack # npm pack content whitelist check
 - Client side lives in `src/client/` (React; registers the
   `conversation.chat.assistant-actions`, `conversation.input.left` and
   `settings.section` slots).
-- Adapted and verified for the DSH `0.1.2-rc.1` session API and UI icon changes
-  (no API drift); if the API drifts on other versions, align
+- Adapted and verified for the DSH `0.1.2-rc.1` session API and UI icon changes;
+  if the API drifts on other versions, align
   with the matching tag of the [deepseek-harness repo](https://github.com/deepseek-ai/deepseek-harness).
 
 ## License

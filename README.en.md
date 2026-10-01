@@ -9,7 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
   <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
-  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.2--rc.1-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.2-rc.1" />
+  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.0--rc.2-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.2.0-rc.2" />
 </p>
 
 A third-party **text-to-speech (TTS) plugin** for the
@@ -68,6 +68,12 @@ bilingual (English / 中文, follows the DSH locale).
   <img src="./assets/readme/screenshot-settings.png" width="75%" alt="Voice (TTS) settings page" /><br>
   <em>Settings page: model / voice / API key / proxy / test</em>
 </p>
+
+## Host and desktop compatibility
+
+On 2026-09-30, the development team reported that `dsh-fish-tts 0.2.11` works with DSH `0.2.0-rc.2` and the desktop client of the same version. The plugin uses the Web client interface; its desktop UI does not require a separate desktop-specific package.
+
+This statement reflects maintainer usage feedback, not verification of every operating system or Fish model. Online synthesis still requires a valid API key, an available voice and network access. Host interface changes require renewed validation.
 
 ## Install
 
@@ -179,7 +185,7 @@ pnpm run check:pack # npm pack content whitelist check
 - Client side lives in `src/client/` (React; registers the
   `conversation.chat.assistant-actions`, `conversation.input.left` and
   `settings.section` slots).
-- Adapted and verified for the DSH `0.1.2-rc.1` session API and UI icon changes;
+- Development dependencies and CI type checks still use the DSH `0.1.2-rc.1` baseline, retaining its session API and UI icon adaptations. See "Host and desktop compatibility" above for current usage feedback;
   if the API drifts on other versions, align
   with the matching tag of the [deepseek-harness repo](https://github.com/deepseek-ai/deepseek-harness).
 

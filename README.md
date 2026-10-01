@@ -9,7 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
   <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
-  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.1.2--rc.1-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.1.2-rc.1" />
+  <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.0--rc.2-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.2.0-rc.2" />
 </p>
 
 > **English:** dsh-fish-tts is a third-party **TTS plugin** for the
@@ -60,6 +60,12 @@
   <img src="./assets/readme/screenshot-settings.png" width="75%" alt="语音合成设置页（模型 / 音色 / API Key / 代理）" /><br>
   <em>设置页：模型 / 音色 / API Key / 代理 / 试听</em>
 </p>
+
+## 宿主与桌面端兼容
+
+开发侧于 2026-09-30 报告：`dsh-fish-tts 0.2.11` 在 DSH `0.2.0-rc.2` 与同版本桌面客户端中可用。插件沿用 Web 客户端接口；桌面客户端中的插件界面不需要另一份桌面专用包。
+
+此说明依据维护者的使用反馈，不代表所有操作系统或所有 Fish 模型均经过验证。在线合成仍需有效 API Key、可用音色和网络；宿主接口发生变化时需重新验证。
 
 ## 安装
 
@@ -149,7 +155,7 @@ pnpm run check:pack # npm pack 内容白名单校验
 
 - host 侧在 `src/index.ts`（Node，注册 `/fish-tts/*` 路由与设置存储）
 - client 侧在 `src/client/`（React，注册 `conversation.chat.assistant-actions`、`conversation.input.left`、`settings.section` 三个 slot）
-- 已针对 DSH `0.1.2-rc.1` 的会话 API 与界面图标变化完成适配和验证；其他版本如接口漂移请对照 [deepseek-harness 仓库](https://github.com/deepseek-ai/deepseek-harness) 相应 tag 调整。
+- 开发依赖与 CI 类型检查基线仍为 DSH `0.1.2-rc.1`，其中的会话 API 与界面图标适配保留；当前宿主使用反馈见上方「宿主与桌面端兼容」。其他版本如接口漂移请对照 [deepseek-harness 仓库](https://github.com/deepseek-ai/deepseek-harness) 相应 tag 调整。
 
 ## License
 

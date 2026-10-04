@@ -73,7 +73,7 @@ bilingual (English / 中文, follows the DSH locale).
 
 On 2026-09-30, the development team reported that `dsh-fish-tts 0.2.11` works with DSH `0.2.0-rc.2` and the desktop client of the same version. The plugin uses the Web client interface; its desktop UI does not require a separate desktop-specific package.
 
-The current **0.2.12 source candidate** only adds localized English and Chinese names and descriptions to the plugin manager. Synthesis and settings are unchanged; this candidate has not been published. See [CHANGELOG.md](./CHANGELOG.md) for update notes.
+**0.2.12** adds English and Chinese names and descriptions to the plugin manager, following the client language. Synthesis and settings are unchanged. See [CHANGELOG.md](./CHANGELOG.md) for update notes.
 
 This statement reflects maintainer usage feedback, not verification of every operating system or Fish model. Online synthesis still requires a valid API key, an available voice and network access. Host interface changes require renewed validation.
 

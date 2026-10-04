@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Fish Audio TTS",
+    "description": "Read assistant replies aloud or automatically with Fish Audio. Requires your own API key and voice."
+  }
+}

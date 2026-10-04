@@ -56,6 +56,7 @@ const [result] = JSON.parse(out)
 const files = result.files.map((f) => f.path).sort()
 
 const expected = [
+  'CHANGELOG.md',
   'LICENSE',
   'README.en.md',
   'README.md',
@@ -67,6 +68,8 @@ const expected = [
   'lib/client.js',
   'lib/client.js.map',
   'lib/index.js',
+  'locale/en.json',
+  'locale/zh.json',
   'package.json',
 ].sort()
 

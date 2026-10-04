@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Fish Audio 语音朗读",
+    "description": "使用 Fish Audio 逐条或自动朗读助手回复；需自备 API Key 和音色。"
+  }
+}

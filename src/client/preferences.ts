@@ -8,16 +8,23 @@ export function createAutoPlayPreference(storage: () => PreferenceStorage): {
   subscribe: (listener: () => void) => () => void
 } {
   let enabled = false
+  let sessionOnly = false
   try { enabled = storage().getItem(KEY) === '1' } catch { /* session default */ }
   const listeners = new Set<() => void>()
   return {
-    enabled: () => enabled,
+    enabled() {
+      if (!sessionOnly) {
+        try { enabled = storage().getItem(KEY) === '1' } catch { /* keep the last-known preference */ }
+      }
+      return enabled
+    },
     set(value) {
       enabled = value
       try {
         if (value) storage().setItem(KEY, '1')
         else storage().removeItem(KEY)
-      } catch { /* keep the in-memory preference */ }
+        sessionOnly = false
+      } catch { sessionOnly = true /* keep the in-memory preference over stale storage */ }
       for (const listener of listeners) {
         try { listener() } catch { /* ignore stale subscribers */ }
       }

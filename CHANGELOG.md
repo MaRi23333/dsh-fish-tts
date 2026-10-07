@@ -16,8 +16,8 @@
 - Track playback by message ID, update controls through subscriptions, and abort superseded browser requests while ignoring their late results.
 - 保存失败不会改变内存配置；设置加载失败可重试且禁写；试听只使用已保存配置，显示失败提示并支持停止，不会顺带保存草稿。
 - Failed saves leave effective settings unchanged. Failed loads can be retried without overwriting settings; testing uses saved settings, reports failures and supports stopping without saving drafts.
-- 浏览器存储不可用时，自动朗读偏好仍可在本次会话使用。
-- Auto-read remains usable for the current session when browser storage is unavailable.
+- 自动朗读开关在同源窗口间于下一条消息同步；浏览器存储不可用或写入失败时，偏好仍可在本次会话使用。
+- Auto-read changes are picked up across same-origin windows on the next message; the preference remains usable for the current session if browser storage is unavailable or a write fails.
 
 ## 0.2.12（2026-10-04）
 

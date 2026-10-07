@@ -7,7 +7,7 @@
  * Selectors return primitives only (string/boolean/number) because uSES
  * requires value-stable selections.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { MessageId } from '@deepseek-ai/dsh-client-connection/client'
 import type { PropsLocale, PropsRuntime, InjectFace } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
@@ -17,11 +17,13 @@ import type { FishTtsKey } from './locales.ts'
 
 export interface FishTtsActionInjected {
   /** Synthesize and play one reply text. */
-  play: (text: string) => Promise<void>
+  play: (text: string, owner: string) => Promise<void>
   /** Stop whatever is playing and cancel any in-flight synthesis. */
-  stop: () => void
-  /** Whether the clip belonging to the given source text is playing. */
-  playingFor: (text: string) => boolean
+  stop: (owner: string) => void
+  /** Message identity separates even identical source texts. */
+  playingFor: (owner: string) => boolean
+  pendingFor: (owner: string) => boolean
+  subscribePlayer: (listener: () => void) => () => void
   /** Whether auto-play of new replies is enabled. */
   autoPlayEnabled: () => boolean
   /** Page-load timestamp used to fence auto-play to genuinely new replies. */
@@ -85,7 +87,7 @@ function selectTime(snapshot: { nodes: readonly unknown[] }, messageId: MessageI
 }
 
 export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | null {
-  const { messageId, useChat, play, stop, playingFor, autoPlayEnabled, loadTime, played, t } = props
+  const { messageId, useChat, play, stop, playingFor, pendingFor, subscribePlayer, autoPlayEnabled, loadTime, played, t } = props
   // The chat session kit injects useChat (SnapshotSelectorHook<ChatSnapshot>);
   // its legacy projection keeps the pre-0.1.2 ConversationSnapshot.node shape,
   // so the text/order/timing selectors below stay unchanged. Every selector
@@ -94,17 +96,15 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
   const isLatest = useChat(s => selectIsLatest({ nodes: s.legacy.nodes }, messageId))
   const time = useChat(s => selectTime({ nodes: s.legacy.nodes }, messageId))
 
-  const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const busy = useSyncExternalStore(subscribePlayer, () => pendingFor(messageId), () => false)
+  const isPlaying = useSyncExternalStore(subscribePlayer, () => playingFor(messageId), () => false)
   const alive = useRef(true)
-  useEffect(() => () => { alive.current = false }, [])
+  const operation = useRef(0)
   useEffect(() => {
-    const tick = (): void => { if (alive.current) setIsPlaying(playingFor(text)) }
-    tick()
-    const timer = window.setInterval(tick, 400)
-    return () => { window.clearInterval(timer) }
-  }, [playingFor, text])
+    alive.current = true
+    return () => { alive.current = false }
+  }, [])
 
   // Auto-play: only for the latest finalized reply, only when it arrived after
   // this page loaded, and only once per message id.
@@ -113,37 +113,22 @@ export function FishTtsActions(props: FishTtsActionProps): React.ReactElement | 
     if (!isLatest || text.trim() === '' || time <= loadTime) return
     if (played.has(messageId)) return
     played.add(messageId)
-    void play(text).catch(() => { played.delete(messageId) })
+    void play(text, messageId).catch(() => { played.delete(messageId) })
   }, [isLatest, text, time, messageId, play, autoPlayEnabled, loadTime, played])
 
   if (text.trim() === '') return null
 
   const onSpeak = (): void => {
-    // A click during this button's in-flight synthesis cancels it.
-    if (busy) {
-      stop()
-      setBusy(false)
+    const token = ++operation.current
+    if (pendingFor(messageId) || playingFor(messageId)) {
+      stop(messageId)
+      setFailure(null)
       return
     }
-    // Toggle: a click while this message's clip plays stops it; a click on
-    // another message's button switches playback straight over to it.
-    if (playingFor(text)) {
-      stop()
-      setIsPlaying(false)
-      return
-    }
-    setBusy(true)
     setFailure(null)
-    void play(text).then(
-      () => {
-        if (!alive.current) return
-        setBusy(false)
-        // false when this play was cancelled or superseded before it started
-        setIsPlaying(playingFor(text))
-      },
+    void play(text, messageId).catch(
       (error: Error & { code?: string }) => {
-        if (!alive.current) return
-        setBusy(false)
+        if (!alive.current || token !== operation.current) return
         setFailure(error.code === 'voice-required' ? t('error.voiceRequired') : t('action.failed'))
       },
     )

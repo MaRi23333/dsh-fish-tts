@@ -23,9 +23,9 @@ import { FishTtsActions, type FishTtsActionInjected } from './FishTtsActions.tsx
 import { FishTtsInputToggle, type FishTtsInputToggleInjected } from './FishTtsInputToggle.tsx'
 import { FishTtsSettings, type FishTtsSettingsInjected } from './FishTtsSettings.tsx'
 import { en, zh } from './locales.ts'
+import { createAutoPlayPreference } from './preferences.ts'
 
 const NS = 'fish-tts'
-const STORAGE_KEY = 'fish-tts.autoplay'
 
 export const inject = ['slots', 'locale']
 
@@ -39,33 +39,10 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'fish-tts: dictionaries')
 
   // ── auto-play preference (browser-local, shared across all UI surfaces) ──
-  const autoPlayListeners = new Set<() => void>()
-  const autoPlayEnabled = (): boolean => {
-    try {
-      return window.localStorage.getItem(STORAGE_KEY) === '1'
-    } catch {
-      return false
-    }
-  }
-  const setAutoPlay = (enabled: boolean): void => {
-    try {
-      if (enabled) window.localStorage.setItem(STORAGE_KEY, '1')
-      else window.localStorage.removeItem(STORAGE_KEY)
-    } catch {
-      // storage unavailable; toggle stays session-local
-    }
-    for (const listener of autoPlayListeners) {
-      try {
-        listener()
-      } catch {
-        // one stale subscriber must not break the others
-      }
-    }
-  }
-  const subscribeAutoPlay = (fn: () => void): (() => void) => {
-    autoPlayListeners.add(fn)
-    return () => { autoPlayListeners.delete(fn) }
-  }
+  const preference = createAutoPlayPreference(() => window.localStorage)
+  const autoPlayEnabled = preference.enabled
+  const setAutoPlay = preference.set
+  const subscribeAutoPlay = preference.subscribe
 
   // ── composer tool-row toggle ─────────────────────────────────────────────
   ctx.slots.inject('conversation.input.left', () => {
@@ -93,9 +70,11 @@ export function apply(ctx: ClientContext): void {
       order: 20,
       locale: NS,
       inject: (): FishTtsActionInjected => ({
-        play: text => player.play(text, replacements()),
-        stop: () => player.stop(),
-        playingFor: text => player.playingFor(text),
+        play: (text, owner) => player.play(text, replacements(), owner),
+        stop: owner => player.stopFor(owner),
+        playingFor: owner => player.playingFor(owner),
+        pendingFor: owner => player.pendingFor(owner),
+        subscribePlayer: listener => player.subscribe(listener),
         autoPlayEnabled,
         loadTime,
         played,
@@ -125,8 +104,10 @@ export function apply(ctx: ClientContext): void {
       label: () => t('settings.label'),
       inject: (): FishTtsSettingsInjected => ({
         t,
-        test: () => player.play(sample, replacements()),
-        playing: () => player.playing,
+        test: () => player.play(sample, replacements(), 'fish-tts:test'),
+        playing: () => player.playingFor('fish-tts:test'),
+        stopTest: () => player.stopFor('fish-tts:test'),
+        subscribePlayer: listener => player.subscribe(listener),
         autoPlay: autoPlayEnabled,
         setAutoPlay,
         subscribeAutoPlay,

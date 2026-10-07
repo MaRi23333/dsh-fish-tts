@@ -5,7 +5,7 @@
  *   POST /fish-tts/synthesize  { text, format? } -> raw audio bytes
  *   GET  /fish-tts/status      -> effective config summary (never the key)
  *   GET  /fish-tts/config      -> editable config (never the key)
- *   PUT  /fish-tts/config      -> { model?, voice?, format?, apiKey?, clearKey? }
+ *   PUT  /fish-tts/config      -> { model?, voice?, savedVoices?, format?, apiKey?, clearKey? }
  *   GET  /fish-tts/models      -> Fish Audio TTS model ids (API when reachable, curated fallback)
  *
  * User-editable settings persist to $DSH_HOME/fish-tts/settings.json. An
@@ -29,6 +29,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { fetch as undiciFetch, ProxyAgent } from 'undici'
+import { normalizeSavedVoices } from './voices.ts'
+import type { SavedVoice } from './voices.ts'
 // Type-only: merges ctx.webServer into Context.
 import type {} from '@deepseek-ai/dsh-host-webserver'
 
@@ -81,6 +83,7 @@ interface SettingsFile {
   version: number
   model?: string
   voice?: string
+  savedVoices?: SavedVoice[]
   format?: string
   proxy?: string
   apiKeyCipher?: ApiKeyCipher
@@ -179,7 +182,7 @@ function redactProxy(url: string): string {
 
 /** Thrown when a settings patch must not be persisted. */
 class SettingsError extends Error {
-  constructor(message: string) {
+  constructor(message: string, readonly code: 'invalid-proxy' | 'invalid-saved-voices' = 'invalid-proxy') {
     super(message)
     this.name = 'SettingsError'
   }
@@ -331,6 +334,7 @@ class SettingsStore {
         version: SETTINGS_VERSION,
         model: this.file.model ?? seed.model,
         voice: this.file.voice ?? seed.voice,
+        ...(this.file.savedVoices !== undefined ? { savedVoices: this.file.savedVoices } : {}),
         format: this.file.format ?? seed.format,
         proxy: sanitizeSeedProxy(this.file.proxy ?? seed.proxy),
         ...(this.file.apiKeyCipher !== undefined ? { apiKeyCipher: this.file.apiKeyCipher } : {}),
@@ -366,6 +370,7 @@ class SettingsStore {
         version: typeof parsed.version === 'number' ? parsed.version : 0,
         model: typeof parsed.model === 'string' ? parsed.model : undefined,
         voice: typeof parsed.voice === 'string' ? parsed.voice : undefined,
+        savedVoices: parsed.savedVoices === undefined ? undefined : normalizeSavedVoices(parsed.savedVoices) ?? [],
         format: typeof parsed.format === 'string' ? parsed.format : undefined,
         proxy: typeof parsed.proxy === 'string' ? parsed.proxy : undefined,
         apiKeyCipher: typeof parsed.apiKeyCipher === 'object' && parsed.apiKeyCipher !== null
@@ -378,9 +383,9 @@ class SettingsStore {
     }
   }
 
-  private write(): void {
+  private write(file: SettingsFile = this.file): void {
     const temp = `${this.filePath}.tmp-${process.pid}`
-    writeFileSync(temp, JSON.stringify(this.file, null, 2), { mode: 0o600 })
+    writeFileSync(temp, JSON.stringify(file, null, 2), { mode: 0o600 })
     renameSync(temp, this.filePath)
   }
 
@@ -390,7 +395,9 @@ class SettingsStore {
       ? decrypt(this.file.apiKeyCipher, this.key)
       : ''
     const model = (this.file.model ?? '').trim() || (config.model ?? '').trim() || MODEL_DEFAULT
-    const voice = (this.file.voice ?? '').trim() || (config.voice ?? '').trim() || ''
+    // An explicitly saved empty voice disables speech, including when the
+    // bundle patch supplies a default. Only an absent field uses that default.
+    const voice = (this.file.voice ?? config.voice ?? '').trim()
     const rawFormat = (this.file.format ?? '').trim() || (config.format ?? '').trim() || 'wav'
     const format = FORMATS.has(rawFormat) ? rawFormat : 'wav'
     // One validate-or-sanitize policy across seed, storage and patch config
@@ -405,42 +412,59 @@ class SettingsStore {
   update(patch: {
     model?: string
     voice?: string
+    savedVoices?: unknown
     format?: string
     proxy?: string
     apiKey?: string
     clearKey?: boolean
   }): void {
-    // Validate the whole patch before mutating any in-memory state, so a
-    // rejected proxy (FISH-SEC-001) cannot leave partially-applied fields.
+    // Validate the whole patch before changing any settings. Both invalid
+    // bookmarks and proxies must reject all accompanying fields.
+    let nextSavedVoices: SavedVoice[] | undefined
+    if (Object.hasOwn(patch, 'savedVoices')) {
+      const normalized = normalizeSavedVoices(patch.savedVoices)
+      if (normalized === null) {
+        throw new SettingsError('savedVoices must contain up to 100 unique voices with valid id, name and note', 'invalid-saved-voices')
+      }
+      nextSavedVoices = normalized
+    }
     let nextProxy: string | undefined
     if (patch.proxy !== undefined) {
       nextProxy = patch.proxy.trim() === '' ? '' : validateProxyForSave(patch.proxy)
     }
+    // A failed write/rename must leave the effective in-memory settings
+    // untouched as well as preserving the previous settings.json.
+    const nextFile: SettingsFile = { ...this.file }
     if (patch.model !== undefined) {
-      this.file.model = patch.model.trim() === '' ? undefined : patch.model.trim()
+      nextFile.model = patch.model.trim() === '' ? undefined : patch.model.trim()
     }
     if (patch.voice !== undefined) {
-      this.file.voice = patch.voice.trim() === '' ? undefined : patch.voice.trim()
+      nextFile.voice = patch.voice.trim()
+    }
+    if (nextSavedVoices !== undefined) {
+      nextFile.savedVoices = nextSavedVoices
     }
     if (patch.format !== undefined) {
       const format = patch.format.trim().toLowerCase()
-      this.file.format = FORMATS.has(format) ? format : undefined
+      nextFile.format = FORMATS.has(format) ? format : undefined
     }
     if (patch.proxy !== undefined) {
-      this.file.proxy = nextProxy === '' ? undefined : nextProxy
+      nextFile.proxy = nextProxy === '' ? undefined : nextProxy
     }
     if (patch.clearKey === true) {
-      delete this.file.apiKeyCipher
+      delete nextFile.apiKeyCipher
     } else if (typeof patch.apiKey === 'string' && patch.apiKey.trim() !== '') {
-      this.file.apiKeyCipher = encrypt(patch.apiKey.trim(), this.key)
+      nextFile.apiKeyCipher = encrypt(patch.apiKey.trim(), this.key)
     }
-    this.write()
+    this.write(nextFile)
+    this.file = nextFile
   }
 
   /** Public summary: everything except key material, proxy userinfo redacted. */
   summary(config: Config): {
     model: string
     voice: string
+    savedVoices: SavedVoice[]
     format: string
     proxy: string
     keyConfigured: boolean
@@ -450,6 +474,7 @@ class SettingsStore {
     return {
       model: eff.model,
       voice: eff.voice,
+      savedVoices: normalizeSavedVoices(this.file.savedVoices ?? []) ?? [],
       format: eff.format,
       proxy: redactProxy(eff.proxy),
       keyConfigured: eff.storedKey !== '' || resolveEnvKey(config) !== '',
@@ -795,16 +820,7 @@ export function apply(ctx: Context, config: Config): void {
       handler: async (req, res) => {
         if (!guardLoopback(req, res)) return
         if (req.method === 'GET') {
-          const eff = store.effective(config)
-          sendJson(res, 200, {
-            ok: true,
-            model: eff.model,
-            voice: eff.voice,
-            format: eff.format,
-            proxy: redactProxy(eff.proxy),
-            keyConfigured: eff.storedKey !== '' || resolveEnvKey(config) !== '',
-            hasStoredKey: eff.hasStoredKey,
-          })
+          sendJson(res, 200, { ok: true, ...store.summary(config) })
           return
         }
         if (req.method === 'PUT') {
@@ -817,6 +833,7 @@ export function apply(ctx: Context, config: Config): void {
           const patch: Parameters<SettingsStore['update']>[0] = {}
           if (typeof body['model'] === 'string') patch.model = body['model']
           if (typeof body['voice'] === 'string') patch.voice = body['voice']
+          if (Object.hasOwn(body, 'savedVoices')) patch.savedVoices = body['savedVoices']
           if (typeof body['format'] === 'string') patch.format = body['format']
           if (typeof body['proxy'] === 'string') patch.proxy = body['proxy']
           if (typeof body['apiKey'] === 'string') patch.apiKey = body['apiKey']
@@ -825,7 +842,7 @@ export function apply(ctx: Context, config: Config): void {
             store.update(patch)
           } catch (error) {
             if (error instanceof SettingsError) {
-              sendJson(res, 400, { ok: false, error: 'invalid-proxy', message: truncate(error.message) })
+              sendJson(res, 400, { ok: false, error: error.code, message: truncate(error.message) })
             } else {
               sendJson(res, 500, { ok: false, error: 'save-failed', message: truncate(error instanceof Error ? error.message : 'save failed') })
             }

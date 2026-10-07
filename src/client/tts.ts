@@ -3,6 +3,7 @@
  * route, play the returned audio through an <audio> element (user-gesture or
  * explicit auto-play opt-in), and stop/replace any currently playing clip.
  */
+import type { SavedVoice } from '../voices.ts'
 
 export interface TtsStatus {
   ok: boolean
@@ -24,6 +25,7 @@ export interface TtsConfig {
   proxy: string
   keyConfigured: boolean
   hasStoredKey: boolean
+  savedVoices: SavedVoice[]
   stateDir?: string
   error?: string
   message?: string
@@ -165,7 +167,10 @@ export function cleanForTts(text: string, repl: TtsReplacements = REPL_EN): stri
 export class FishTtsPlayer {
   private current: HTMLAudioElement | null = null
   private currentUrl: string | null = null
-  private currentText: string | null = null
+  private currentOwner: string | null = null
+  private pendingOwner: string | null = null
+  private request: AbortController | null = null
+  private readonly listeners = new Set<() => void>()
   /** Generation counter; stop() and each play() bump it to invalidate
    *  in-flight synthesis, so a superseded fetch result never starts audio. */
   private playToken = 0
@@ -180,83 +185,116 @@ export class FishTtsPlayer {
       URL.revokeObjectURL(this.currentUrl)
       this.currentUrl = null
     }
-    this.currentText = null
+    this.currentOwner = null
+  }
+
+  /** Notify controls immediately, without per-message polling. */
+  private notify(): void {
+    for (const listener of this.listeners) {
+      try { listener() } catch { /* one subscriber cannot interrupt playback */ }
+    }
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
   }
 
   /** Stop whatever is playing and cancel any in-flight synthesis. */
   stop(): void {
     this.playToken += 1
+    this.request?.abort()
+    this.request = null
+    this.pendingOwner = null
     this.halt()
+    this.notify()
+  }
+
+  stopFor(owner: string): void {
+    if (this.currentOwner === owner || this.pendingOwner === owner) this.stop()
   }
 
   get playing(): boolean {
     return this.current !== null && !this.current.paused && !this.current.ended
   }
 
-  /** Whether the clip currently playing belongs to the given source text. */
-  playingFor(text: string): boolean {
-    return this.playing && this.currentText === text
+  /** Owners identify messages, even when two messages contain identical text. */
+  playingFor(owner: string): boolean {
+    return this.playing && this.currentOwner === owner
+  }
+
+  pendingFor(owner: string): boolean {
+    return this.pendingOwner === owner
   }
 
   /**
    * Synthesize and play one text.
    * @param text - raw markdown text of the reply (cleaned internally).
    * @param repl - spoken placeholder words for the active locale.
+   * @param owner - message identity, or an independent owner for a test clip.
    */
-  async play(text: string, repl: TtsReplacements = REPL_EN): Promise<void> {
+  async play(text: string, repl: TtsReplacements = REPL_EN, owner: string = text): Promise<void> {
     const cleaned = cleanForTts(text, repl)
     if (cleaned === '') return
     const token = ++this.playToken
-    const response = await fetch('/fish-tts/synthesize', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: cleaned }),
-    })
-    if (!response.ok) {
-      let message = response.statusText
-      let code = 'synthesis-failed'
-      try {
-        const payload = await response.json() as { message?: string; error?: string }
-        message = payload.message ?? payload.error ?? message
-        if (payload.error !== undefined) code = payload.error
-      } catch {
-        // non-JSON error body
-      }
-      const error = new Error(message) as Error & { code?: string }
-      error.code = code
-      throw error
-    }
-    const blob = await response.blob()
-    // A stop() or a newer play() arrived while synthesizing: discard silently.
-    if (token !== this.playToken) return
-    const url = URL.createObjectURL(blob)
+    this.request?.abort()
     this.halt()
-    const audio = new Audio(url)
-    audio.volume = getVolume()
-    // Speed applies per new clip (consistent with volume): a settings change
-    // takes effect on the next play. Unsupported browsers stay at 1x.
-    applySpeed(audio)
-    this.current = audio
-    this.currentUrl = url
-    this.currentText = text
-    audio.addEventListener('ended', () => {
-      if (this.current === audio) {
-        this.current = null
-        this.currentText = null
-        URL.revokeObjectURL(url)
-        if (this.currentUrl === url) this.currentUrl = null
-      }
-    })
+    const request = new AbortController()
+    this.request = request
+    this.pendingOwner = owner
+    this.notify()
     try {
+      const response = await fetch('/fish-tts/synthesize', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: cleaned }),
+        signal: request.signal,
+      })
+      if (token !== this.playToken) return
+      if (!response.ok) {
+        let message = response.statusText
+        let code = 'synthesis-failed'
+        try {
+          const payload = await response.json() as { message?: string; error?: string }
+          message = payload.message ?? payload.error ?? message
+          if (payload.error !== undefined) code = payload.error
+        } catch {
+          // non-JSON error body
+        }
+        const error = new Error(message) as Error & { code?: string }
+        error.code = code
+        throw error
+      }
+      const blob = await response.blob()
+      // A stop() or a newer play() arrived while synthesizing: discard silently.
+      if (token !== this.playToken) return
+      const url = URL.createObjectURL(blob)
+      this.currentUrl = url
+      const audio = new Audio(url)
+      audio.volume = getVolume()
+      applySpeed(audio)
+      this.current = audio
+      this.currentOwner = owner
+      const finished = (): void => {
+        if (this.current === audio) {
+          this.halt()
+          this.notify()
+        }
+      }
+      audio.addEventListener('ended', finished, { once: true })
+      audio.addEventListener('error', finished, { once: true })
       await audio.play()
     } catch (error) {
-      if (this.current === audio) {
-        this.current = null
-        this.currentText = null
-        URL.revokeObjectURL(url)
-        if (this.currentUrl === url) this.currentUrl = null
-      }
+      // Explicit cancellation and a newer request are expected outcomes.
+      if (token !== this.playToken || request.signal.aborted) return
+      this.halt()
       throw error
+    } finally {
+      if (token === this.playToken) {
+        this.request = null
+        this.pendingOwner = null
+        this.notify()
+      }
     }
   }
 
@@ -275,10 +313,11 @@ export class FishTtsPlayer {
   async config(): Promise<TtsConfig> {
     try {
       const response = await fetch('/fish-tts/config', { cache: 'no-store' })
-      if (!response.ok) return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, error: `HTTP ${response.status}` }
-      return await response.json() as TtsConfig
+      if (!response.ok) return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: `HTTP ${response.status}` }
+      const payload = await response.json() as TtsConfig
+      return { ...payload, savedVoices: payload.savedVoices ?? [] }
     } catch (error) {
-      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, error: error instanceof Error ? error.message : 'config fetch failed' }
+      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: error instanceof Error ? error.message : 'config fetch failed' }
     }
   }
 
@@ -290,6 +329,7 @@ export class FishTtsPlayer {
     proxy?: string
     apiKey?: string
     clearKey?: boolean
+    savedVoices?: SavedVoice[]
   }): Promise<TtsConfig> {
     try {
       const response = await fetch('/fish-tts/config', {
@@ -299,11 +339,11 @@ export class FishTtsPlayer {
       })
       const payload = await response.json() as (TtsConfig & { message?: string })
       if (!response.ok || payload.ok !== true) {
-        return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, error: payload.message ?? payload.error ?? `HTTP ${response.status}` }
+        return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: payload.message ?? payload.error ?? `HTTP ${response.status}` }
       }
-      return payload
+      return { ...payload, savedVoices: payload.savedVoices ?? [] }
     } catch (error) {
-      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, error: error instanceof Error ? error.message : 'config save failed' }
+      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: error instanceof Error ? error.message : 'config save failed' }
     }
   }
 

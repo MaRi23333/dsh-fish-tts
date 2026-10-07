@@ -40,16 +40,19 @@ bilingual (English / 中文, follows the DSH locale).
   replaced with placeholders instead of being read out.
 - **Auto-read**: a small speaker toggle in the composer tool row (synced with the settings
   page). When enabled, replies that arrive after the page loaded are read automatically.
+- **Saved voices**: bookmark voice IDs with readable names and multiline notes, then select
+  a name to switch immediately. Bookmarks stay on this machine; switching preserves other
+  unsaved settings, and removing a bookmark does not clear the current voice.
 - **Settings page** (Settings → Voice (Fish TTS)):
   - TTS model (datalist suggestions + free text; e.g. s2.1-pro-free / s2.1-pro / s2-pro;
     saved values apply immediately; default s2.1-pro-free)
-  - Voice `reference_id` (**required** — voices are personal data, the plugin ships no
-    default; synthesis is refused with a hint while empty)
+  - Voice `reference_id` (enter, edit or clear it directly without saving a bookmark;
+    synthesis requires a valid ID, and the plugin ships no default voice)
   - API key (**AES-256-GCM encrypted** in `$DSH_HOME/fish-tts/settings.json` on this
     machine; `key.bin` is generated once and ACL-tightened on Windows; the key never
     appears in any GET response, log line or the repository)
   - HTTP proxy (e.g. `http://127.0.0.1:7890`, leave empty for direct)
-  - Test clip, auto-read toggle, volume slider (default 60%), playback-speed slider
+  - Test / stop test playback, auto-read toggle, volume slider (default 60%), playback-speed slider
     (0.5–2.0×, pitch-preserving; fixed at 1× where the browser lacks support)
 
 ## Screenshots
@@ -65,8 +68,8 @@ bilingual (English / 中文, follows the DSH locale).
 </p>
 
 <p align="center">
-  <img src="./assets/readme/screenshot-settings.png" width="75%" alt="Voice (TTS) settings page" /><br>
-  <em>Settings page: model / voice / API key / proxy / test</em>
+  <img src="./assets/readme/screenshot-settings.png" width="75%" alt="Example settings: current voice, saved voice switching, connection and playback preferences" /><br>
+  <em>Apply a voice ID directly, switch saved voices by name and preview the active voice. Connection settings collapse; playback preferences need no save. The pictured voice is illustrative and is not bundled with the plugin.</em>
 </p>
 
 ## Host and desktop compatibility
@@ -74,6 +77,11 @@ bilingual (English / 中文, follows the DSH locale).
 On 2026-09-30, the development team reported that `dsh-fish-tts 0.2.11` works with DSH `0.2.0-rc.2` and the desktop client of the same version. The plugin uses the Web client interface; its desktop UI does not require a separate desktop-specific package.
 
 **0.2.12** adds English and Chinese names and descriptions to the plugin manager, following the client language. Synthesis and settings are unchanged. See [CHANGELOG.md](./CHANGELOG.md) for update notes.
+
+Version **0.2.13** adds saved voices, redesigns the settings flow
+and appearance, and fixes playback ownership, settings failure recovery and test feedback.
+Stopping or switching cancels the browser request, but does not guarantee that
+Fish has stopped processing it or charging for it.
 
 This statement reflects maintainer usage feedback, not verification of every operating system or Fish model. Online synthesis still requires a valid API key, an available voice and network access. Host interface changes require renewed validation.
 
@@ -115,19 +123,38 @@ npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ### Verify the install
 
 1. Open **Settings → Voice (Fish TTS)**;
-2. Fill in your **API key** and voice **`reference_id`**;
-3. Click **Save settings** (the API key status turns "configured");
-4. Click **Test** — hearing the test sentence in your voice means the install works.
+2. Enter your **API key** under **Connection settings**, then click **Save connection settings**;
+3. Enter the voice **`reference_id`** under **Voice ID**, then click **Apply voice** (no name or bookmark required);
+4. Click **Preview current voice** — hearing the test sentence in your voice means the install works.
 
-> The **Test** button performs one real synthesis and verifies the key, the voice and
-> the proxy configuration in a single click. It stays disabled while the settings are
-> unsaved or the voice is empty.
+> **Preview current voice** uses the saved voice and connection settings without saving any
+> form drafts. It requests preview audio and calls the Fish Audio API when no cached result
+> is available. A voice and an available key are required; pending or playing previews can be stopped.
+
+### Save and switch your usual voices
+
+**Voice ID** is always visible. Paste or edit it and click **Apply voice**, or empty the
+field and click **Clear voice** to stop using the current voice. These actions update
+only the current ID, require no bookmark and leave saved voices unchanged. Apply any
+pending ID changes before previewing.
+
+Bookmarks are optional shortcuts. A matching saved voice displays its name and note.
+Select a name under **Switch voice** to switch immediately and update the ID field.
+**Save voice** or **Name the current voice** opens a separate form for a name, ID and
+optional note; **Add and use** saves and selects it. Existing voice IDs are preserved,
+and up to 100 voices can be saved.
+
+Expand **Manage saved voices** to use, edit or remove a voice. Editing changes only its
+name and note without switching the active voice. Removal requires confirmation and
+does not clear the current voice. Adding, editing and switching leave connection drafts
+untouched. Connection settings have their own save button. Playback preferences need no
+save button; volume and speed apply to subsequent read-aloud playback.
 
 ## Configuration
 
-First run: open Settings → Voice (Fish TTS), fill in model, voice, API key (from Fish
-Audio) and a proxy if needed, save, then use the **Test** button. All settings take
-effect immediately after saving — no restart required.
+First run: open Settings → Voice (Fish TTS), save the connection settings (Fish Audio
+API key, model and optional proxy), enter and apply a voice ID, then preview it. Saved settings
+take effect immediately — no restart required.
 
 You may also add a `config` to the `fish-tts` row in your profile's `cordis.patch.yml`
 (settings-page values take precedence):

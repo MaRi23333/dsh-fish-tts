@@ -139,7 +139,10 @@ test('delivery rejection surfaces as voice-rejected and deletes the file', async
 
 test('error codes: text-too-long, text-empty, disabled, perMinute=0, no key, no voice', async () => {
   const h = makeHarness()
-  await assert.rejects(() => h.tool.execute({ text: 'x'.repeat(301) }), /text-too-long/)
+  await assert.rejects(
+    () => h.tool.execute({ text: 'x'.repeat(DEFAULT_SPEAK_SETTINGS.maxChars + 1) }),
+    /text-too-long/,
+  )
   await assert.rejects(() => h.tool.execute({ text: '```js\ncode()\n```' }), /text-empty/)
   await assert.rejects(() => h.tool.execute({ text: '' }), /must be a non-empty string/)
 
@@ -214,6 +217,35 @@ test('upstream error text is sanitized: bearer fragments redacted, length bounde
       return true
     },
   )
+})
+
+test('channel error text with a local path is path-redacted before reaching the model', async () => {
+  const h = makeHarness()
+  h.deliveries.register('qqbot', {
+    deliver: async () => { throw new Error(`ENOENT: open E:\\Users\\me\\out\\speak-x.mp3 missing at /home/qq/bot`) },
+  })
+  await assert.rejects(
+    () => h.tool.execute({ text: '你好' }),
+    (error: unknown) => {
+      const message = (error as Error).message
+      assert.ok(!message.includes('E:\\Users'), 'windows path must be redacted')
+      assert.ok(!message.includes('/home/qq'), 'unix path must be redacted')
+      return true
+    },
+  )
+  rmSync(h.outDir, { recursive: true, force: true })
+})
+
+test('a wrapped abort message still maps to timeout, not network', async () => {
+  // The shape synthesize() would produce if an abort were ever wrapped:
+  // FishTtsError(status 0) carrying an abort message must NOT read as a
+  // retryable network failure (glm-reviewer M1 regression guard).
+  const h = makeHarness()
+  h.failSynth(errorWithStatus(0))
+  ;(h.deps as { synthesize: unknown }).synthesize = async () => {
+    throw new Error('Fish TTS failed (network): This operation was aborted')
+  }
+  await assert.rejects(() => h.tool.execute({ text: '你好' }), /\(timeout\)/)
 })
 
 test('cancelled before delivery: nothing is sent and the slot is released', async () => {

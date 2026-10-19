@@ -46,6 +46,7 @@ import {
   DeliveryRegistry,
   RateLimiter,
   SPEAK_FILE_TTL_MS,
+  SPEAK_MAX_FILE_BYTES,
   SPEAK_SYNTH_TIMEOUT_MS,
   SPEAK_TOOL_NAME,
   cleanupSpeakFiles,
@@ -624,6 +625,11 @@ async function synthesize(
       return body
     } catch (error) {
       if (error instanceof FishTtsError) throw error
+      // A caller abort or an exhausted shared budget must surface as-is
+      // (AbortError/TimeoutError) instead of being wrapped into a "network"
+      // failure: the speech-tool contract maps those to cancelled/timeout.
+      // Retrying more proxies against a dead signal would just spin.
+      if ((shared !== undefined && shared.aborted) || opts.signal?.aborted === true) throw error
       lastError = { status: 0, message: error instanceof Error ? error.message : String(error) }
     }
   }
@@ -779,6 +785,11 @@ export function apply(ctx: Context, config: Config): void {
       timeoutMs: SPEAK_SYNTH_TIMEOUT_MS,
       ...(prosody !== undefined ? { prosody } : {}),
     })
+    // Cap check BEFORE the cache insert: an oversized clip must not occupy
+    // the shared LRU (200 entries × megabytes would pin real memory).
+    if (audio.length > SPEAK_MAX_FILE_BYTES) {
+      throw new FishTtsError(0, `synthesized clip exceeds the ${SPEAK_MAX_FILE_BYTES}-byte speak cap`)
+    }
     if (cache.size >= CACHE_LIMIT) {
       const oldest = cache.keys().next().value
       if (oldest !== undefined) cache.delete(oldest)

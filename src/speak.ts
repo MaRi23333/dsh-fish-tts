@@ -220,7 +220,9 @@ export class RateLimiter {
    */
   tryAcquire(key: string, intervalMs: number, now = Date.now()): { ok: true; token: number } | { ok: false; retryAfterSec: number } {
     // Opportunistic prune so long-running processes do not grow the map with
-    // dead sessions: stale entries are worthless once past the interval.
+    // dead sessions: stale entries are worthless once past the interval. The
+    // threshold rides on the CURRENT call's intervalMs — good enough for a
+    // cleanup hint and harmless if perMinute changes at runtime.
     if (++this.ops % 256 === 0 && this.last.size > 16) {
       for (const [entry, at] of this.last) {
         if (now - at >= intervalMs) this.last.delete(entry)
@@ -390,15 +392,17 @@ function speakError(code: string, message: string): Error {
 }
 
 /**
- * Redact credential-bearing fragments and bound the length of upstream error
- * text before it reaches the model context or logs: a hostile proxy error
- * page must not be able to echo the API key, and channel exception text must
- * not carry identity data verbatim.
+ * Redact credential-bearing fragments, local paths, and bound the length of
+ * upstream error text before it reaches the model context or logs: a hostile
+ * proxy error page must not be able to echo the API key, and channel
+ * exception text must not carry the out-dir path or identity data verbatim.
  */
 export function sanitizeErrorDetail(text: string, max = 200): string {
   return text
     .replace(/bearer\s+\S+/gi, '[redacted]')
     .replace(/authorization"?\s*[:=]\s*"?[^,";\s]+/gi, '[redacted]')
+    .replace(/[A-Za-z]:\\[^\s"'`,;)]*/g, '[path]')
+    .replace(/(?:\/(?:home|Users|root)\/)\S*/g, '[path]')
     .slice(0, max)
 }
 
@@ -407,6 +411,10 @@ export function speakSynthesisErrorCode(error: unknown, aborted = false): 'cance
   if (aborted) return 'cancelled'
   const name = (error as { name?: unknown } | null)?.name
   if (name === 'TimeoutError' || name === 'AbortError') return 'timeout'
+  // Belt-and-braces: a wrapper error that kept an abort message (but lost
+  // the name) still reads as timeout, not network.
+  const message = (error as { message?: unknown } | null)?.message
+  if (typeof message === 'string' && /\babort|timed? ?out\b/i.test(message)) return 'timeout'
   const status = (error as { status?: unknown } | null)?.status
   if (typeof status !== 'number') return 'network'
   if (status === 401 || status === 403) return 'auth'

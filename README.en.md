@@ -44,12 +44,12 @@ bilingual (English / 中文, follows the DSH locale).
   a name to switch immediately. Bookmarks stay on this machine; switching preserves other
   unsaved settings, and removing a bookmark does not clear the current voice.
 - **Audio generation tool `fish_tts_speak`**: lets agents generate audio files from spoken
-  lines; when the session has a chat channel attached (e.g. an IM bot), the file is
-  delivered as a voice bubble. Line cleaning, per-conversation rate limiting, server-side
-  loudness normalization and the file lifecycle all live in this plugin; Fish emotion
-  and sound bracket tags (`[soft]`, `[laughing]`, …) pass through verbatim and are never
-  read out. Channel plugins register a delivery hook through `ctx.fishTts.registerDelivery`;
-  outbound filtering stays channel-side.
+  lines; when the session has a chat channel attached (e.g. an IM bot), the file is handed
+  to the channel plugin for delivery as a voice bubble. Line cleaning, per-conversation
+  rate limiting, server-side loudness normalization and the file lifecycle all live in this
+  plugin; Fish emotion and sound bracket tags (`[soft]`, `[laughing]`, …) pass through
+  verbatim and are never read out. Channel plugins register a delivery hook through
+  `ctx.fishTts.registerDelivery`; outbound filtering stays channel-side.
 - **Settings page** (Settings → Voice (Fish TTS)):
   - TTS model (datalist suggestions + free text; e.g. s2.1-pro-free / s2.1-pro / s2-pro;
     saved values apply immediately; default s2.1-pro-free)

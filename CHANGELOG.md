@@ -2,8 +2,8 @@
 
 ## 0.3.0（2026-10-19）
 
-- 新增智能体可调用的音频生成工具 `fish_tts_speak`：把台词生成为音频文件；所在会话接了聊天通道时自动作为语音条投递。台词清洗、每会话限频、响度与文件生命周期都在本插件，通道只注册投递器并保留自己的出站过滤。
-- Added the agent-callable audio-generation tool `fish_tts_speak`: spoken lines become audio files, delivered as voice bubbles when the session has a chat channel attached. Line cleaning, per-conversation rate limiting, loudness and the file lifecycle live in this plugin; channels only register a delivery hook and keep their own outbound filtering.
+- 新增智能体可调用的音频生成工具 `fish_tts_speak`：把台词生成为音频文件；所在会话接了聊天通道时，文件交由通道插件投递为语音条。台词清洗、每会话限频、响度与文件生命周期都在本插件，通道只注册投递器并保留自己的出站过滤。
+- Added the agent-callable audio-generation tool `fish_tts_speak`: spoken lines become audio files; when the session has a chat channel attached, the file is handed to the channel plugin for delivery as a voice bubble. Line cleaning, per-conversation rate limiting, loudness and the file lifecycle live in this plugin; channels only register a delivery hook and keep their own outbound filtering.
 - 台词处理以现网事故为防线：Fish 情绪/声音方括号标签原样透传（严禁剥掉方括号），中文括号旁白不删不改，只清理代码块、URL、markdown 符号与 emoji；未知英文标签形 token 静默忽略，中文引用类方括号内容永不误删。
 - Speech-line processing pins the incident class: Fish bracket tags pass through verbatim (brackets are never stripped), Chinese-parenthesis asides stay untouched, and only code blocks, URLs, markdown symbols and emoji are removed. Unknown English-tag-shaped tokens are dropped silently; CJK bracketed content is never touched.
 - 每会话每分钟上限（默认 1，0 为停用）先占槽后合成、失败释放，防并发绕过；错误携带剩余秒数并区分 rate-limited / text-too-long / auth / quota / network / voice-rejected 等模型可读代码，超时 20 秒、取消后绝不投递。

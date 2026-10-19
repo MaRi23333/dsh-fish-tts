@@ -39,7 +39,8 @@ bilingual (English / 中文, follows the DSH locale).
   cleaned before speaking: paths, URLs, long ids and code blocks are
   replaced with placeholders instead of being read out.
 - **Auto-read**: a small speaker toggle in the composer tool row (synced with the settings
-  page). When enabled, replies that arrive after the page loaded are read automatically.
+  page). When enabled, new replies that arrive while the DSH interface is open are read
+  automatically.
 - **Saved voices**: bookmark voice IDs with readable names and multiline notes, then select
   a name to switch immediately. Bookmarks stay on this machine; switching preserves other
   unsaved settings, and removing a bookmark does not clear the current voice.
@@ -64,8 +65,8 @@ bilingual (English / 中文, follows the DSH locale).
     toggle, volume trim (-20..+20 dB) — a **collapsed group at the end of the settings
     page**; if you do not use it you can ignore it entirely
   - Test / stop test playback, auto-read toggle, volume slider (default 60%,
-    in-page only), playback-speed slider (0.5–2.0×, pitch-preserving; fixed at 1× where the
-    browser lacks support)
+    affects playback inside DSH only, not the generated files), playback-speed slider
+    (0.5–2.0×, pitch-preserving; fixed at 1× where the environment lacks support)
 
 ## Screenshots
 
@@ -92,7 +93,7 @@ On 2026-09-30, the development team reported that `dsh-fish-tts 0.2.11` works wi
 
 Version **0.2.13** adds saved voices, redesigns the settings flow
 and appearance, and fixes playback ownership, settings failure recovery and test feedback.
-Stopping or switching cancels the browser request, but does not guarantee that
+Stopping or switching cancels the interface's request, but does not guarantee that
 Fish has stopped processing it or charging for it.
 
 This statement reflects maintainer usage feedback, not verification of every operating system or Fish model. Online synthesis still requires a valid API key, an available voice and network access. Host interface changes require renewed validation.

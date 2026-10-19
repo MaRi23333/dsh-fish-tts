@@ -1,5 +1,5 @@
 /**
- * fish_tts_speak — model-callable speech tool for chat channels (QQ bot, …).
+ * fish_tts_speak — model-callable speech tool for chat channels (IM bots, …).
  *
  * fish-tts owns synthesis, line processing, rate limiting, loudness and the
  * audio file lifecycle; a channel plugin only registers a delivery hook and
@@ -26,7 +26,7 @@ import type { SavedVoice } from './voices.ts'
 /** Tool name as the model sees it; channels whitelist this name. */
 export const SPEAK_TOOL_NAME = 'fish_tts_speak'
 
-/** Formats a voice bubble can use (QQ accepts silk/mp3/wav/ogg; opus is ogg). */
+/** Formats a voice bubble can use (IM channels accept silk/mp3/wav/ogg; opus is ogg). */
 export const SPEAK_FORMATS = new Set(['mp3', 'wav', 'opus'])
 export const DEFAULT_SPEAK_FORMAT = 'mp3'
 

@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Fish Audio TTS",
-    "description": "Read assistant replies aloud or automatically with Fish Audio, and expose a callable speech tool (e.g. QQ voice bubbles). Requires your own API key and voice."
+    "description": "Read assistant replies aloud or automatically with Fish Audio, and expose an audio-generation tool that agents can call. Requires your own API key and voice."
   }
 }

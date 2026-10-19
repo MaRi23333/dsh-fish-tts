@@ -164,6 +164,9 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
   const [voiceFeedback, setVoiceFeedback] = useState<Feedback>(null)
   const [managementFeedback, setManagementFeedback] = useState<Feedback>(null)
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null)
+  // Destructive "clear saved key" waits for an inline confirmation, exactly
+  // like saved-voice removal.
+  const [pendingKeyClear, setPendingKeyClear] = useState(false)
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [modelsError, setModelsError] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -329,6 +332,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
     setConnectionFeedback(null)
     const result = await persistPatch({ clearKey: true }, 'clearKey', message => setConnectionFeedback({ message, error: true }))
     if (result === null || !alive.current) return
+    setPendingKeyClear(false)
     setConnectionFeedback({ message: t(result.keyConfigured ? 'settings.connection.keyClearedEnv' : 'settings.connection.keyCleared') })
     if (!result.keyConfigured) setConnectionOpen(true)
   }
@@ -496,7 +500,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
       : value >= 0 && value <= 30)
     if (!valid) {
       editSpeakDraft(field === 'maxChars' ? { maxChars: current.speak.maxChars } : { perMinute: current.speak.perMinute })
-      setSpeakFeedback({ message: t('settings.speak.invalid'), error: true })
+      setSpeakFeedback({ message: `${t(field === 'maxChars' ? 'settings.speak.maxChars' : 'settings.speak.perMinute')} — ${t('settings.speak.invalid')}`, error: true })
       return
     }
     void saveSpeak(field === 'maxChars' ? { maxChars: value } : { perMinute: value })
@@ -536,7 +540,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
         <div style={fieldStyle}>
           <label htmlFor={`${ids}-manual-id`}>{t('settings.voice')}</label>
           <div style={actionsStyle}>
-            <input id={`${ids}-manual-id`} value={manualVoiceDraft} maxLength={256} disabled={fieldsDisabled} onChange={event => { setManualVoiceDraft(event.target.value); setManualVoiceFeedback(null); setTestError(null) }} placeholder={t('settings.voice.placeholder')} style={{ ...monoInputStyle, flex: '1 1 240px', width: 'auto' }} />
+            <input id={`${ids}-manual-id`} value={manualVoiceDraft} maxLength={256} disabled={fieldsDisabled} onChange={event => { setManualVoiceDraft(event.target.value); setManualVoiceFeedback(null); setTestError(null) }} onKeyDown={event => { if (event.key === 'Enter' && manualVoiceDirty && !fieldsDisabled) void onApplyManualVoice() }} placeholder={t('settings.voice.placeholder')} style={{ ...monoInputStyle, flex: '1 1 240px', width: 'auto' }} />
             <button type="button" disabled={fieldsDisabled || !manualVoiceDirty} onClick={() => { void onApplyManualVoice() }} style={buttonStyle(fieldsDisabled || !manualVoiceDirty, 'primary')}>{t(savingAction === 'manualVoice' ? 'settings.saving' : manualVoiceDraft.trim() === '' ? 'settings.voice.clear' : 'settings.voice.apply')}</button>
           </div>
           <FeedbackMessage feedback={manualVoiceFeedback} />
@@ -576,7 +580,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
 
         {voiceEditor !== null && (
           <form noValidate aria-labelledby={`${ids}-editor-title`} onSubmit={event => { event.preventDefault(); void onSaveVoice() }} style={{ ...stackStyle, gap: '10px', marginTop: '4px', padding: '12px', borderRadius: '8px', border: `1px solid ${colors.border}`, background: 'transparent' }}>
-            <h4 id={`${ids}-editor-title`} style={headingStyle}>{t(voiceEditor.mode === 'add' ? 'settings.voices.add' : 'settings.voices.editCurrent')}</h4>
+            <h4 id={`${ids}-editor-title`} style={headingStyle}>{t(voiceEditor.mode === 'add' ? 'settings.voices.add' : 'settings.voices.editTitle')}</h4>
             <div style={fieldStyle}>
               <label htmlFor={`${ids}-name`}>{t('settings.voices.name')}</label>
               <input id={`${ids}-name`} ref={nameInput} autoFocus value={voiceEditor.name} required aria-required="true" aria-invalid={!!voiceErrors.name} aria-describedby={voiceErrors.name ? `${ids}-name-error` : undefined} maxLength={80} disabled={fieldsDisabled} onChange={event => updateVoiceEditor('name', event.target.value)} placeholder={t('settings.voices.name.placeholder')} style={inputStyle} />
@@ -646,7 +650,16 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
             <div style={fieldStyle}>
               <label htmlFor={`${ids}-key`}>{t('settings.apiKey')}</label>
               <input id={`${ids}-key`} ref={keyInput} type="password" value={connectionDraft.apiKey} disabled={fieldsDisabled} onChange={event => editConnection('apiKey', event.target.value)} placeholder={keyConfigured ? t('settings.apiKey.placeholder') : t('settings.apiKey.newPlaceholder')} autoComplete="off" style={monoInputStyle} />
-              {savedConfig?.hasStoredKey && <button type="button" disabled={fieldsDisabled} onClick={() => { void onClearKey() }} style={{ ...buttonStyle(fieldsDisabled, 'danger'), alignSelf: 'flex-start' }}>{t('settings.apiKey.clear')}</button>}
+              {savedConfig?.hasStoredKey && <button type="button" disabled={fieldsDisabled} onClick={() => setPendingKeyClear(true)} style={{ ...buttonStyle(fieldsDisabled, 'danger'), alignSelf: 'flex-start' }}>{t('settings.apiKey.clear')}</button>}
+              {pendingKeyClear && (
+                <div style={{ ...stackStyle, gap: '6px', padding: '10px 12px', borderRadius: '6px', border: '1px solid rgba(220, 38, 38, 0.45)', background: 'rgba(220, 38, 38, 0.06)' }}>
+                  <p style={{ margin: 0, overflowWrap: 'anywhere' }}>{t('settings.apiKey.clearConfirm')}</p>
+                  <div style={actionsStyle}>
+                    <button type="button" disabled={fieldsDisabled} onClick={() => { void onClearKey() }} style={buttonStyle(fieldsDisabled, 'danger')}>{t('settings.apiKey.clearYes')}</button>
+                    <button type="button" disabled={savingAction === 'clearKey'} onClick={() => setPendingKeyClear(false)} style={buttonStyle(savingAction === 'clearKey')}>{t('settings.cancel')}</button>
+                  </div>
+                </div>
+              )}
             </div>
             <div style={fieldStyle}>
               <label htmlFor={`${ids}-model`}>{t('settings.model')}</label>
@@ -661,18 +674,22 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
             <div style={actionsStyle}>
               <button type="button" disabled={fieldsDisabled || !connectionDirty} onClick={() => { void onSaveConnection() }} style={buttonStyle(fieldsDisabled || !connectionDirty, 'primary')}>{t(savingAction === 'connection' ? 'settings.saving' : 'settings.connection.save')}</button>
             </div>
+            <p style={hintStyle}>{t('settings.sourceHint')}</p>
+            <FeedbackMessage feedback={connectionFeedback} />
           </div>
         </details>
-        <FeedbackMessage feedback={connectionFeedback} />
       </section>
 
       <section aria-labelledby={`${ids}-preferences`} style={{ ...cardStyle, ...stackStyle }}>
         <div style={{ ...stackStyle, gap: '4px' }}>
           <h3 id={`${ids}-preferences`} style={headingStyle}>{t('settings.preferences.title')}</h3>
         </div>
-        <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
-          <label htmlFor={`${ids}-autoplay`}>{t('settings.autoplay')}</label>
-          <input id={`${ids}-autoplay`} type="checkbox" checked={enabled} onChange={() => { const next = !enabled; setEnabled(next); setAutoPlay(next) }} style={{ width: '18px', height: '18px', accentColor: colors.primary }} />
+        <div style={fieldStyle}>
+          <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
+            <label htmlFor={`${ids}-autoplay`}>{t('settings.autoplay')}</label>
+            <input id={`${ids}-autoplay`} type="checkbox" checked={enabled} onChange={() => { const next = !enabled; setEnabled(next); setAutoPlay(next) }} style={{ width: '18px', height: '18px', accentColor: colors.primary }} />
+          </div>
+          <p style={hintStyle}>{t('settings.autoplay.hint')}</p>
         </div>
         <div style={fieldStyle}>
           <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
@@ -710,7 +727,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
                 </div>
                 <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
                   <label htmlFor={`${ids}-speak-format`}>{t('settings.speak.format')}</label>
-                  <select id={`${ids}-speak-format`} value={speakDraft.format} disabled={fieldsDisabled || savingAction === 'speak'} onChange={event => { const next = event.target.value; if (next === 'mp3' || next === 'wav' || next === 'opus') { editSpeakDraft({ format: next }); void saveSpeak({ format: next }) } }} style={{ ...inputStyle, flex: '0 1 160px', width: 'auto' }}>
+                  <select id={`${ids}-speak-format`} value={speakDraft.format} disabled={fieldsDisabled || savingAction === 'speak' || !speakDraft.enabled} onChange={event => { const next = event.target.value; if (next === 'mp3' || next === 'wav' || next === 'opus') { editSpeakDraft({ format: next }); void saveSpeak({ format: next }) } }} style={{ ...inputStyle, flex: '0 1 160px', width: 'auto' }}>
                     <option value="mp3">mp3</option>
                     <option value="wav">wav</option>
                     <option value="opus">opus</option>
@@ -718,29 +735,31 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
                 </div>
                 <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
                   <label htmlFor={`${ids}-speak-maxchars`}>{t('settings.speak.maxChars')}</label>
-                  <input id={`${ids}-speak-maxchars`} type="number" min={50} max={1000} step={10} value={speakDraft.maxChars} disabled={fieldsDisabled || savingAction === 'speak'} onChange={event => editSpeakDraft({ maxChars: Number(event.target.value) })} onBlur={event => commitSpeakNumber('maxChars', event.target.value)} onKeyDown={event => { if (event.key === 'Enter') commitSpeakNumber('maxChars', (event.target as HTMLInputElement).value) }} style={{ ...inputStyle, flex: '0 1 160px', width: 'auto' }} />
+                  <input id={`${ids}-speak-maxchars`} type="number" min={50} max={1000} step={10} value={speakDraft.maxChars} disabled={fieldsDisabled || savingAction === 'speak' || !speakDraft.enabled} onChange={event => editSpeakDraft({ maxChars: Number(event.target.value) })} onBlur={event => commitSpeakNumber('maxChars', event.target.value)} onKeyDown={event => { if (event.key === 'Enter') commitSpeakNumber('maxChars', (event.target as HTMLInputElement).value) }} style={{ ...inputStyle, flex: '0 1 160px', width: 'auto' }} />
                 </div>
                 <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
                   <label htmlFor={`${ids}-speak-perminute`}>{t('settings.speak.perMinute')}</label>
-                  <input id={`${ids}-speak-perminute`} type="number" min={0} max={30} step={1} value={speakDraft.perMinute} disabled={fieldsDisabled || savingAction === 'speak'} onChange={event => editSpeakDraft({ perMinute: Number(event.target.value) })} onBlur={event => commitSpeakNumber('perMinute', event.target.value)} onKeyDown={event => { if (event.key === 'Enter') commitSpeakNumber('perMinute', (event.target as HTMLInputElement).value) }} style={{ ...inputStyle, flex: '0 1 160px', width: 'auto' }} />
+                  <input id={`${ids}-speak-perminute`} type="number" min={0} max={30} step={1} value={speakDraft.perMinute} disabled={fieldsDisabled || savingAction === 'speak' || !speakDraft.enabled} onChange={event => editSpeakDraft({ perMinute: Number(event.target.value) })} onBlur={event => commitSpeakNumber('perMinute', event.target.value)} onKeyDown={event => { if (event.key === 'Enter') commitSpeakNumber('perMinute', (event.target as HTMLInputElement).value) }} style={{ ...inputStyle, flex: '0 1 160px', width: 'auto' }} />
                 </div>
-                <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
-                  <label htmlFor={`${ids}-speak-loudness`}>{t('settings.speak.loudness')}</label>
-                  <input id={`${ids}-speak-loudness`} type="checkbox" checked={speakDraft.loudness} disabled={fieldsDisabled || savingAction === 'speak'} onChange={() => { const next = !speakDraft.loudness; editSpeakDraft({ loudness: next }); void saveSpeak({ loudness: next }) }} style={{ width: '18px', height: '18px', accentColor: colors.primary }} />
+                <div style={fieldStyle}>
+                  <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
+                    <label htmlFor={`${ids}-speak-loudness`}>{t('settings.speak.loudness')}</label>
+                    <input id={`${ids}-speak-loudness`} type="checkbox" checked={speakDraft.loudness} disabled={fieldsDisabled || savingAction === 'speak' || !speakDraft.enabled} onChange={() => { const next = !speakDraft.loudness; editSpeakDraft({ loudness: next }); void saveSpeak({ loudness: next }) }} style={{ width: '18px', height: '18px', accentColor: colors.primary }} />
+                  </div>
+                  <p style={hintStyle}>{t('settings.speak.loudness.hint')}</p>
                 </div>
                 <div style={fieldStyle}>
                   <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
                     <label htmlFor={`${ids}-speak-volume`}>{t('settings.speak.volumeDb')}</label>
                     <output htmlFor={`${ids}-speak-volume`}>{speakDraft.volumeDb > 0 ? `+${speakDraft.volumeDb}` : speakDraft.volumeDb} dB</output>
                   </div>
-                  <input id={`${ids}-speak-volume`} type="range" min={-20} max={20} step={1} value={speakDraft.volumeDb} disabled={fieldsDisabled || savingAction === 'speak'} onChange={event => editSpeakDraft({ volumeDb: Number(event.target.value) })} onPointerUp={commitSpeakVolume} onBlur={commitSpeakVolume} onKeyUp={commitSpeakVolume} style={{ minWidth: 0, width: '100%', accentColor: colors.primary }} />
-                  <p style={hintStyle}>{t('settings.speak.loudness.hint')}</p>
+                  <input id={`${ids}-speak-volume`} type="range" min={-20} max={20} step={1} value={speakDraft.volumeDb} disabled={fieldsDisabled || savingAction === 'speak' || !speakDraft.enabled} onChange={event => editSpeakDraft({ volumeDb: Number(event.target.value) })} onPointerUp={commitSpeakVolume} onBlur={commitSpeakVolume} onKeyUp={commitSpeakVolume} style={{ minWidth: 0, width: '100%', accentColor: colors.primary }} />
                 </div>
               </>
             )}
+            <FeedbackMessage feedback={speakFeedback} />
           </div>
         </details>
-        <FeedbackMessage feedback={speakFeedback} />
       </section>
     </div>
   )

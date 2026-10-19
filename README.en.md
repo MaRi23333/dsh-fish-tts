@@ -43,9 +43,10 @@ bilingual (English / 中文, follows the DSH locale).
 - **Saved voices**: bookmark voice IDs with readable names and multiline notes, then select
   a name to switch immediately. Bookmarks stay on this machine; switching preserves other
   unsaved settings, and removing a bookmark does not clear the current voice.
-- **Speech tool `fish_tts_speak`**: chat-channel agents (e.g. a QQ bot) can synthesize and
-  deliver voice bubbles. Line cleaning, per-conversation rate limiting, server-side loudness
-  normalization and the 24-hour audio file lifecycle all live in this plugin; Fish emotion
+- **Audio generation tool `fish_tts_speak`**: lets agents generate audio files from spoken
+  lines; when the session has a chat channel attached (e.g. an IM bot), the file is
+  delivered as a voice bubble. Line cleaning, per-conversation rate limiting, server-side
+  loudness normalization and the file lifecycle all live in this plugin; Fish emotion
   and sound bracket tags (`[soft]`, `[laughing]`, …) pass through verbatim and are never
   read out. Channel plugins register a delivery hook through `ctx.fishTts.registerDelivery`;
   outbound filtering stays channel-side.
@@ -58,10 +59,10 @@ bilingual (English / 中文, follows the DSH locale).
     machine; `key.bin` is generated once and ACL-tightened on Windows; the key never
     appears in any GET response, log line or the repository)
   - HTTP proxy (e.g. `http://127.0.0.1:7890`, leave empty for direct)
-  - Speech tool: enable toggle, format (mp3/wav/opus), max chars per line, max sends per
-    minute (0 disables), server-side loudness normalization toggle, volume trim (-20..+20 dB)
-    — a **collapsed group at the end of the settings page**; if you do not use voice
-    bubbles you can ignore it entirely
+  - Audio generation (agent calls): enable toggle, format (mp3/wav/opus), max chars per
+    message, max sends per minute (0 disables sending), server-side loudness normalization
+    toggle, volume trim (-20..+20 dB) — a **collapsed group at the end of the settings
+    page**; if you do not use it you can ignore it entirely
   - Test / stop test playback, auto-read toggle, volume slider (default 60%,
     in-page only), playback-speed slider (0.5–2.0×, pitch-preserving; fixed at 1× where the
     browser lacks support)
@@ -218,21 +219,22 @@ You may also add a `config` to the `fish-tts` row in your profile's `cordis.patc
 | `proxy` | `''` | HTTP(S) proxy (settings-page value wins) |
 | `stateDir` | `$DSH_HOME/fish-tts` | Settings / key-file directory |
 
-### Speech tool (fish_tts_speak)
+### Audio generation (fish_tts_speak)
 
-For chat-channel plugins (e.g. a QQ bot): the model passes an utterance and this plugin
-runs clean → synthesize → deliver. The channel registers a delivery hook in the host
-context; outbound filtering and target-session resolution stay channel-side:
+An audio-file generation tool for agents: the model passes an utterance and this plugin
+runs clean → synthesize → write to disk. When the session has a chat channel attached,
+the channel's delivery hook takes over the send; outbound filtering and target-session
+resolution stay channel-side:
 
 ```ts
-// inside the channel plugin (e.g. qqbot)
+// inside the channel plugin (any channel id; the example uses "im")
 const fishTts = ctx.get('fishTts')
-ctx.effect(() => fishTts.registerDelivery('qqbot', {
+ctx.effect(() => fishTts.registerDelivery('im', {
   // optional: claim the sessions this channel owns (omit to claim everything)
   claims: (sessionId, agent) => manager.findByAgent(agent) !== undefined,
   // outbound filter → throw on hit (nothing delivered) → resolve target → send voice
   deliver: async ({ audioPath, mime, text, sessionId, agent }) => { /* … */ },
-}), 'qqbot: fish-tts delivery')
+}), 'im: fish-tts delivery')
 ```
 
 Contract highlights: input `{ text, voice?, format? }` (`voice` accepts a saved-voice
@@ -260,7 +262,7 @@ unsupported on s1 models), with a -20..+20 dB volume trim on top.
   no personal data.
 - Synthesis text is capped at 12000 characters; results are cached in-process
   (max 200 entries), cleared on restart.
-- Speech-tool results carry sizes, format and delivery status only — no absolute paths,
+- Audio-generation results carry sizes, format and delivery status only — no absolute paths,
   spoken lines or identity data; generated audio stays in `$DSH_HOME/fish-tts/out/` on
   this machine, and logs record byte/char counts only.
 

@@ -15,7 +15,7 @@
  *           file lifecycle live here; see src/speak.ts). Registered while
  *           the speech tool is enabled in the settings.
  *   service ctx.fishTts.registerDelivery(channel, { claims?, deliver }) —
- *           channel plugins (QQ bot) claim sessions and run their outbound
+ *           channel plugins (IM bots) claim sessions and run their outbound
  *           filter + sendVoice inside deliver.
  *
  * User-editable settings persist to $DSH_HOME/fish-tts/settings.json. An
@@ -746,7 +746,7 @@ export function apply(ctx: Context, config: Config): void {
   }
 
   // ── speech tool (fish_tts_speak) + channel delivery hooks ────────────────
-  // Channel plugins (e.g. the QQ bot) call ctx.fishTts.registerDelivery to
+  // Channel plugins (e.g. IM bots) call ctx.fishTts.registerDelivery to
   // claim sessions and deliver generated voice files; everything upstream of
   // the actual send — line cleaning, limits, loudness, file lifecycle — lives
   // here so it stays identical across channels.

@@ -60,7 +60,9 @@ bilingual (English / 中文, follows the DSH locale).
   - HTTP proxy (e.g. `http://127.0.0.1:7890`, leave empty for direct)
   - Speech tool: enable toggle, format (mp3/wav/opus), max chars per line, max sends per
     minute (0 disables), server-side loudness normalization toggle, volume trim (-20..+20 dB)
-  - Test / stop test playback, auto-read toggle, preview volume slider (default 60%,
+    — a **collapsed group at the end of the settings page**; if you do not use voice
+    bubbles you can ignore it entirely
+  - Test / stop test playback, auto-read toggle, volume slider (default 60%,
     in-page only), playback-speed slider (0.5–2.0×, pitch-preserving; fixed at 1× where the
     browser lacks support)
 

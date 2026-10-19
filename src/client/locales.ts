@@ -108,6 +108,8 @@ export type FishTtsKey =
   | 'settings.speed.unsupported'
   | 'settings.speak.section'
   | 'settings.speak.hint'
+  | 'settings.speak.statusOn'
+  | 'settings.speak.statusOff'
   | 'settings.speak.enabled'
   | 'settings.speak.format'
   | 'settings.speak.maxChars'
@@ -229,12 +231,14 @@ export const zh: Record<FishTtsKey, string> = {
   'settings.status.keyMissing': '未配置 API Key',
   'settings.autoplay': '新回复自动朗读',
   'settings.autoplay.hint': '仅自动朗读页面打开后产生的新回复，不会重播历史消息。',
-  'settings.volume': '试听音量',
+  'settings.volume': '音量',
   'settings.volume.hint': '只影响网页里朗读的音量；不影响合成响度，也不影响发给 QQ 等通道的语音文件。',
   'settings.speed': '播放速度',
   'settings.speed.unsupported': '当前浏览器不支持倍速播放，已固定为 1×',
   'settings.speak.section': '语音工具（智能体调用）',
-  'settings.speak.hint': '供 QQ 等聊天通道的智能体把台词合成为语音条并发送；网页消息朗读不经过这里。',
+  'settings.speak.hint': '供 QQ 等聊天通道的智能体把台词合成为语音条并发送；网页消息朗读不经过这里，不需要就保持折叠。',
+  'settings.speak.statusOn': '已启用',
+  'settings.speak.statusOff': '已停用',
   'settings.speak.enabled': '启用语音工具',
   'settings.speak.format': '语音格式',
   'settings.speak.maxChars': '单条文本上限（字）',
@@ -351,12 +355,14 @@ export const en: Record<FishTtsKey, string> = {
   'settings.status.keyMissing': 'No API key configured',
   'settings.autoplay': 'Read new replies automatically',
   'settings.autoplay.hint': 'Only replies that arrive after this page loaded are read automatically; history is never replayed.',
-  'settings.volume': 'Preview volume',
+  'settings.volume': 'Volume',
   'settings.volume.hint': 'Affects in-page read-aloud only — not synthesis loudness, and not voice files delivered to chat channels.',
   'settings.speed': 'Playback speed',
   'settings.speed.unsupported': 'This browser does not support pitch-preserving speed control; playback stays at 1×',
   'settings.speak.section': 'Speech tool (agent calls)',
-  'settings.speak.hint': 'Lets chat-channel agents (e.g. QQ) synthesize and deliver a voice bubble; in-page read-aloud does not use this.',
+  'settings.speak.hint': 'Lets chat-channel agents (e.g. QQ) synthesize and deliver a voice bubble; in-page read-aloud does not use this. Keep it collapsed if you do not need it.',
+  'settings.speak.statusOn': 'Enabled',
+  'settings.speak.statusOff': 'Disabled',
   'settings.speak.enabled': 'Enable the speech tool',
   'settings.speak.format': 'Voice format',
   'settings.speak.maxChars': 'Max chars per line',

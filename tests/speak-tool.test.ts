@@ -320,7 +320,8 @@ test('a claims hook that throws counts as not claimed; the next channel still ge
 test('tool name and registration-facing shape', () => {
   const h = makeHarness()
   assert.equal(h.tool.name, SPEAK_TOOL_NAME)
-  assert.equal(h.tool.timeoutMs, 20000)
+  // Declared worst case: 15 s synthesis budget + 20 s delivery ceiling.
+  assert.equal(h.tool.timeoutMs, 40000)
   const output = h.tool.output as { schema: { required: string[] }; render: unknown }
   assert.deepEqual(output.schema.required.sort(), ['bytes', 'chars', 'delivered', 'format', 'mime'])
   assert.equal(typeof output.render, 'function')

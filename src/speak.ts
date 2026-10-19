@@ -37,13 +37,15 @@ export const SPEAK_MIME: Record<string, string> = {
   opus: 'audio/ogg',
 }
 
-/** Tool-level timeout; the Fish call itself is bounded tighter. */
-export const SPEAK_TIMEOUT_MS = 20_000
+/** Tool-level timeout: 15 s synthesis budget + 20 s delivery ceiling + slack.
+ * The harness does not enforce this, so it stays an honest worst-case figure. */
+export const SPEAK_TIMEOUT_MS = 40_000
 /** Total budget for one tool-path synthesis across all proxy attempts. */
 export const SPEAK_SYNTH_TIMEOUT_MS = 15_000
 /** Hard ceiling for one delivery attempt; a hung channel must not pin the
- * exclusive tool pipeline (the harness does not enforce timeoutMs itself). */
-export const SPEAK_DELIVER_TIMEOUT_MS = 10_000
+ * exclusive tool pipeline (the harness does not enforce timeoutMs itself).
+ * 20 s per the first channel's feedback: slow uploads hit the old 10 s. */
+export const SPEAK_DELIVER_TIMEOUT_MS = 20_000
 /** Generated voice files older than this are deleted opportunistically. */
 export const SPEAK_FILE_TTL_MS = 24 * 60 * 60 * 1000
 /** Reject absurdly large audio before writing it to disk. */

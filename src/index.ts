@@ -332,6 +332,10 @@ class SettingsStore {
    * object) — only then is the file parked as .corrupt-*; a well-formed v0
    * file is migrated in place instead. */
   private parseFailed = false
+  /** True when a PRESENT speak block failed validation: the tool fails
+   * closed (disabled) instead of silently reviving default limits, and the
+   * startup warning tells the user to fix the file. */
+  speakCorrupt = false
 
   constructor(dir: string, seed: { model: string; voice: string; format: string; proxy: string }) {
     mkdirSync(dir, { recursive: true })
@@ -393,6 +397,11 @@ class SettingsStore {
         this.parseFailed = true
         return { version: 0 }
       }
+      let speak: SpeakSettings | undefined
+      if (parsed.speak !== undefined) {
+        speak = normalizeSpeakSettings(parsed.speak) ?? undefined
+        if (speak === undefined) this.speakCorrupt = true
+      }
       return {
         version: typeof parsed.version === 'number' ? parsed.version : 0,
         model: typeof parsed.model === 'string' ? parsed.model : undefined,
@@ -400,7 +409,7 @@ class SettingsStore {
         savedVoices: parsed.savedVoices === undefined ? undefined : normalizeSavedVoices(parsed.savedVoices) ?? [],
         format: typeof parsed.format === 'string' ? parsed.format : undefined,
         proxy: typeof parsed.proxy === 'string' ? parsed.proxy : undefined,
-        speak: parsed.speak === undefined ? undefined : normalizeSpeakSettings(parsed.speak) ?? undefined,
+        speak,
         apiKeyCipher: typeof parsed.apiKeyCipher === 'object' && parsed.apiKeyCipher !== null
           ? parsed.apiKeyCipher as ApiKeyCipher
           : undefined,
@@ -433,7 +442,10 @@ class SettingsStore {
     // effective, are never persisted, and never appear in responses.
     const rawProxy = (this.file.proxy ?? '').trim() || (config.proxy ?? '').trim() || ''
     const proxy = sanitizeSeedProxy(rawProxy) ?? ''
-    const speak = this.file.speak ?? DEFAULT_SPEAK_SETTINGS
+    // A stored-but-invalid speak block fails closed: the tool stays off
+    // until the file is fixed, instead of silently reviving default limits.
+    const speak = this.file.speak
+      ?? (this.speakCorrupt ? { ...DEFAULT_SPEAK_SETTINGS, enabled: false } : DEFAULT_SPEAK_SETTINGS)
     return { model, voice, format, proxy, speak, storedKey, hasStoredKey: this.file.apiKeyCipher !== undefined }
   }
 
@@ -582,11 +594,16 @@ async function synthesize(
   }
   const attempts: Array<string | null> = [...proxies, null]
   let lastError: SynthesisError = { status: 0, message: 'unknown error' }
+  // A caller-supplied timeout is a TOTAL budget shared by all attempts (the
+  // speech tool passes 15 s so N proxy hops can never stretch the wall time);
+  // without one, every attempt keeps its own 60 s window (read-aloud route).
+  const budget = opts.timeoutMs !== undefined ? AbortSignal.timeout(opts.timeoutMs) : undefined
+  const shared = opts.signal !== undefined && budget !== undefined
+    ? AbortSignal.any([opts.signal, budget])
+    : opts.signal ?? budget
   for (const proxy of attempts) {
     try {
-      const signal = opts.signal !== undefined
-        ? AbortSignal.any([opts.signal, AbortSignal.timeout(opts.timeoutMs ?? 60_000)])
-        : AbortSignal.timeout(opts.timeoutMs ?? 60_000)
+      const signal = shared ?? AbortSignal.timeout(60_000)
       const response = proxy === null
         ? await undiciFetch(API_URL, { method: 'POST', headers, body: payload, signal })
         : await undiciFetch(API_URL, { method: 'POST', headers, body: payload, dispatcher: agents.get(proxy), signal })
@@ -730,9 +747,15 @@ export function apply(ctx: Context, config: Config): void {
   const deliveries = new DeliveryRegistry()
   const limiter = new RateLimiter()
   const speakOutDir = (): string => join(store.stateDir, 'out')
-  const loggerLike = (ctx as { logger?: { info?: (message: string) => void } }).logger
+  const loggerLike = (ctx as { logger?: { info?: (message: string) => void; warn?: (message: string) => void } }).logger
   const speakLog = (message: string): void => {
     try { loggerLike?.info?.(`fish-tts: ${message}`) } catch { /* logging must never break the tool */ }
+  }
+  const speakWarn = (message: string): void => {
+    try { loggerLike?.warn?.(`fish-tts: ${message}`) } catch { /* logging must never break the tool */ }
+  }
+  if (store.speakCorrupt) {
+    speakWarn('the speak block in settings.json is invalid — the speech tool stays disabled until it is fixed or removed')
   }
 
   /** Tool-path synthesis: prosody from the speak settings, a tighter timeout,
@@ -765,29 +788,36 @@ export function apply(ctx: Context, config: Config): void {
   }
 
   /** Register or unregister fish_tts_speak following the tools service and
-   * the enabled flag; safe to call repeatedly (idempotent teardown first). */
+   * the enabled flag; safe to call repeatedly (idempotent teardown first).
+   * Never throws into the caller (a failed re-sync must not 500 the very
+   * PUT that triggered it) — failures are logged instead. */
   let disposeTool: (() => void) | null = null
   const syncSpeakTool = (): void => {
     if (disposeTool !== null) {
-      disposeTool()
+      try { disposeTool() } catch (error) { speakWarn(`tool teardown failed: ${truncate(error instanceof Error ? error.message : String(error))}`) }
       disposeTool = null
     }
-    const tools = ctx.get('tools') as { register?: (definition: unknown) => unknown } | undefined
-    if (tools?.register === undefined) return
-    if (!store.effective(config).speak.enabled) return
-    const dispose = tools.register(createSpeakTool({
-      settings: () => store.effective(config).speak,
-      defaultVoice: () => store.effective(config).voice,
-      savedVoices: () => store.summary(config).savedVoices,
-      hasApiKey: () => store.apiKey(config) !== '',
-      model: () => store.effective(config).model,
-      synthesize: speakSynthesize,
-      deliveries,
-      limiter,
-      outDir: speakOutDir,
-      log: speakLog,
-    }))
-    disposeTool = typeof dispose === 'function' ? dispose as (() => void) : null
+    try {
+      const tools = ctx.get('tools') as { register?: (definition: unknown) => unknown } | undefined
+      if (tools?.register === undefined) return
+      if (!store.effective(config).speak.enabled) return
+      const dispose = tools.register(createSpeakTool({
+        settings: () => store.effective(config).speak,
+        defaultVoice: () => store.effective(config).voice,
+        savedVoices: () => store.summary(config).savedVoices,
+        hasApiKey: () => store.apiKey(config) !== '',
+        model: () => store.effective(config).model,
+        synthesize: speakSynthesize,
+        deliveries,
+        limiter,
+        outDir: speakOutDir,
+        log: speakLog,
+      }))
+      disposeTool = typeof dispose === 'function' ? dispose as (() => void) : null
+    } catch (error) {
+      disposeTool = null
+      speakWarn(`failed to register ${SPEAK_TOOL_NAME}: ${truncate(error instanceof Error ? error.message : String(error))}`)
+    }
   }
 
   // Local-only threat model (FISH-SEC-002): this plugin serves configuration,

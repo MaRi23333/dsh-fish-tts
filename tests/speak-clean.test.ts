@@ -55,6 +55,11 @@ test('a markdown link is only unwrapped with a URL target, so tags stay safe', (
   // `[tag](不是链接)` must not eat the tag brackets.
   const line = '[soft]（悄悄说）'
   assert.ok(cleanSpeechText(line).includes('[soft]'))
+  // The incident replay: a tag wearing link syntax must NOT become a bare word.
+  const linked = cleanSpeechText('[soft](https://example.com) 晚安')
+  assert.ok(linked.includes('[soft]'), `tag must keep brackets: ${linked}`)
+  assert.ok(!linked.includes('example.com'))
+  assert.equal(dropUnknownTags(linked), linked)
 })
 
 test('emoji, variation selectors and joiners are removed', () => {

@@ -88,6 +88,7 @@ test('happy path with a claiming channel: delivered, no absolute path in result,
   assert.equal(sent.length, 1)
   assert.ok(sent[0].text.includes('[soft]'), 'the channel filters the exact synthesized text, tags intact')
   assert.ok(sent[0].audioPath.startsWith(h.outDir))
+  assert.ok(!existsSync(sent[0].audioPath), 'a delivered file is freed immediately, not kept for the TTL')
 
   // The slot stays claimed after a successful send: an immediate retry is rate-limited.
   await assert.rejects(
@@ -165,6 +166,56 @@ test('synthesis failures map by upstream status: 401 auth, 429 quota, other fail
   }
 })
 
+test('a hung delivery hits the ceiling: voice-rejected, file kept for the TTL, slot released', async () => {
+  const h = makeHarness({ deliverTimeoutMs: 30 })
+  h.deliveries.register('qqbot', { deliver: () => new Promise<void>(() => {}) })
+  await assert.rejects(() => h.tool.execute({ text: '你好' }), /voice-rejected.*delivery timed out/s)
+  assert.equal(readdirSync(h.outDir).length, 1, 'a timed-out delivery may still complete channel-side; the file stays')
+  // Slot released: the next call synthesizes instead of being rate-limited.
+  h.deliveries.register('qqbot', { deliver: async () => {} })
+  const result = await h.tool.execute({ text: '换个说法' })
+  assert.equal(result.delivered, true)
+  rmSync(h.outDir, { recursive: true, force: true })
+})
+
+test('absurdly large audio is rejected before touching the disk', async () => {
+  const h = makeHarness()
+  h.failSynth(null)
+  // Swap the fake synth AFTER construction so it returns an oversized buffer.
+  ;(h.deps as { synthesize: unknown }).synthesize = async () => Buffer.alloc(11 * 1024 * 1024)
+  const tool = createSpeakTool(h.deps) as Harness['tool']
+  await assert.rejects(() => tool.execute({ text: '你好' }), /over the .*-byte cap/)
+  assert.equal(readdirSync(h.outDir).length, 0)
+  rmSync(h.outDir, { recursive: true, force: true })
+})
+
+test('synthesis timeout surfaces its own code, not network', async () => {
+  const h = makeHarness()
+  const timeoutError = new Error('This operation was aborted')
+  timeoutError.name = 'TimeoutError'
+  h.failSynth(timeoutError)
+  await assert.rejects(() => h.tool.execute({ text: '你好' }), /\(timeout\)/)
+})
+
+test('upstream error text is sanitized: bearer fragments redacted, length bounded', async () => {
+  const h = makeHarness()
+  h.failSynth(errorWithStatus(0))
+  // Overwrite the failure with a leaky message.
+  ;(h.deps as { synthesize: unknown }).synthesize = async () => {
+    throw new Error('proxy page: Authorization: Bearer sk-leaky-key-value-123 <html>' + 'x'.repeat(500))
+  }
+  await assert.rejects(
+    () => h.tool.execute({ text: '你好' }),
+    (error: unknown) => {
+      const message = (error as Error).message
+      assert.ok(!message.includes('sk-leaky-key-value-123'), 'key material must be redacted')
+      assert.ok(!message.includes('Authorization:'), 'authorization header must be redacted')
+      assert.ok(message.length < 400, 'detail must be bounded')
+      return true
+    },
+  )
+})
+
 test('cancelled before delivery: nothing is sent and the slot is released', async () => {
   const h = makeHarness()
   const delivered: string[] = []
@@ -212,6 +263,25 @@ test('stale speak files are swept by the TTL cleanup after a call', async () => 
   utimesSync(stale, yesterday, yesterday)
   await h.tool.execute({ text: '你好' })
   assert.ok(!existsSync(stale), 'files older than 24h must be removed')
+  rmSync(h.outDir, { recursive: true, force: true })
+})
+
+test('a claims hook that throws counts as not claimed; the next channel still gets it', async () => {
+  const h = makeHarness()
+  const delivered: string[] = []
+  h.deliveries.register('first', {
+    claims: () => { throw new Error('claims exploded') },
+    deliver: async (input) => { delivered.push(`first:${input.audioPath}`) },
+  })
+  h.deliveries.register('qqbot', {
+    claims: () => true,
+    deliver: async (input) => { delivered.push(`qqbot:${input.audioPath}`) },
+  })
+  const result = await h.tool.execute({ text: '你好' }, { agent: { session: { id: 's' } } })
+  assert.equal(result.delivered, true)
+  assert.equal(result.channel, 'qqbot')
+  assert.equal(delivered.length, 1)
+  assert.ok(delivered[0].startsWith('qqbot:'))
   rmSync(h.outDir, { recursive: true, force: true })
 })
 

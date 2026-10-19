@@ -37,12 +37,17 @@ export const SPEAK_MIME: Record<string, string> = {
   opus: 'audio/ogg',
 }
 
-/** Tool-level synthesis timeout; the Fish call itself is bounded tighter. */
+/** Tool-level timeout; the Fish call itself is bounded tighter. */
 export const SPEAK_TIMEOUT_MS = 20_000
-/** One Fish synthesis attempt; typical latency is 2–6 s. */
+/** Total budget for one tool-path synthesis across all proxy attempts. */
 export const SPEAK_SYNTH_TIMEOUT_MS = 15_000
+/** Hard ceiling for one delivery attempt; a hung channel must not pin the
+ * exclusive tool pipeline (the harness does not enforce timeoutMs itself). */
+export const SPEAK_DELIVER_TIMEOUT_MS = 10_000
 /** Generated voice files older than this are deleted opportunistically. */
 export const SPEAK_FILE_TTL_MS = 24 * 60 * 60 * 1000
+/** Reject absurdly large audio before writing it to disk. */
+export const SPEAK_MAX_FILE_BYTES = 10 * 1024 * 1024
 
 /** User-configurable speech-tool settings (persisted in settings.json). */
 export interface SpeakSettings {
@@ -163,8 +168,10 @@ export function cleanSpeechText(input: string): string {
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`[^`\n]*`/g, ' ')
     // images entirely; links keep their label only when the target is a URL
+    // and the label is not itself a documented Fish tag
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]*)\]\((?:https?:\/\/|mailto:|www\.)[^)\s]*\)/g, '$1')
+    .replace(/\[([^\]]*)\]\((?:https?:\/\/|mailto:|www\.)[^)\s]*\)/g, (link: string, label: string) =>
+      SPEECH_TAGS.has(label.trim().toLowerCase()) ? link : label)
     // bare URLs
     .replace(/\b(?:https?:\/\/|www\.)\S+/g, ' ')
     // emoji, variation selectors, zero-width joiners
@@ -178,12 +185,12 @@ export function cleanSpeechText(input: string): string {
 /**
  * Drop bracketed tokens that are not documented Fish tags. A known tag
  * (`[soft]`, `[crying loudly]`, case-insensitive) survives verbatim; an
- * English-tag-shaped unknown token (letters/spaces only — the exact shape of
+ * English-tag-shaped unknown token (letters/digits/spaces — the shape of
  * emotion/sound tags) is removed so Fish cannot read the bare word aloud.
  * Anything else — CJK references like「[见附录第三节]」, citations like
  * `[1]` — is content and is left untouched.
  */
-const TAG_LIKE = /^[a-z][a-z ]{0,31}$/i
+const TAG_LIKE = /^[a-z][a-z0-9 ]{0,31}$/i
 
 export function dropUnknownTags(text: string): string {
   return text
@@ -223,7 +230,10 @@ export class RateLimiter {
     if (previous !== undefined) {
       const elapsed = now - previous
       if (elapsed < intervalMs) {
-        return { ok: false, retryAfterSec: Math.max(1, Math.ceil((intervalMs - elapsed) / 1000)) }
+        // Capped at one interval: a rolled-back system clock must not turn
+        // the cooldown into a self-denial with a giant wait.
+        const cap = Math.max(1, Math.ceil(intervalMs / 1000))
+        return { ok: false, retryAfterSec: Math.min(cap, Math.max(1, Math.ceil((intervalMs - elapsed) / 1000))) }
       }
     }
     this.last.set(key, now)
@@ -247,14 +257,20 @@ export interface SpeakDeliveryInput {
   sessionId: string
   /** The harness agent object, pass-through for channel-side target resolution. */
   agent?: unknown
+  /** The tool call's abort signal. Channels should pass it to their send so an
+   * interrupted turn stops the upload; a delivery already on the wire cannot
+   * be recalled, so this is best-effort. */
+  signal?: AbortSignal
 }
 
 /**
  * One channel's delivery hook. `claims` decides whether a session belongs to
- * the channel (omitted = claim everything); `deliver` runs the channel's
- * outbound filter and sends the voice — it must throw when the message is
- * rejected or the target cannot be resolved, and the tool surfaces that as
- * `voice-rejected`.
+ * the channel — return exactly `true` to claim; `false`, a throw, or any
+ * other value counts as "not claimed" (fail closed, keep looking). When
+ * `claims` is omitted the channel claims everything. `deliver` runs the
+ * channel's outbound filter and sends the voice — it must throw when the
+ * message is rejected or the target cannot be resolved, and the tool
+ * surfaces that as `voice-rejected`.
  */
 export interface SpeakDelivery {
   claims?: (sessionId: string, agent?: unknown) => boolean
@@ -277,10 +293,20 @@ export class DeliveryRegistry {
     return this.entries.size
   }
 
-  /** First registered channel that claims this session, in registration order. */
+  /** First registered channel that claims this session, in registration
+   * order. A `claims` hook that throws is treated as "not claimed" so one
+   * broken channel cannot take the tool call down — keep looking. */
   find(sessionId: string, agent?: unknown): { channel: string; delivery: SpeakDelivery } | undefined {
     for (const [channel, delivery] of this.entries) {
-      if (delivery.claims?.(sessionId, agent) ?? true) return { channel, delivery }
+      let claimed = true
+      if (delivery.claims !== undefined) {
+        try {
+          claimed = delivery.claims(sessionId, agent) === true
+        } catch {
+          claimed = false
+        }
+      }
+      if (claimed) return { channel, delivery }
     }
     return undefined
   }
@@ -340,6 +366,8 @@ export interface SpeakToolDeps {
   limiter: RateLimiter
   /** Directory the generated files are written to. */
   outDir: () => string
+  /** Delivery ceiling override (tests); defaults to SPEAK_DELIVER_TIMEOUT_MS. */
+  deliverTimeoutMs?: number
   log: (message: string) => void
   now?: () => number
 }
@@ -361,8 +389,24 @@ function speakError(code: string, message: string): Error {
   return new Error(`${SPEAK_TOOL_NAME}(${code}): ${message}`)
 }
 
+/**
+ * Redact credential-bearing fragments and bound the length of upstream error
+ * text before it reaches the model context or logs: a hostile proxy error
+ * page must not be able to echo the API key, and channel exception text must
+ * not carry identity data verbatim.
+ */
+export function sanitizeErrorDetail(text: string, max = 200): string {
+  return text
+    .replace(/bearer\s+\S+/gi, '[redacted]')
+    .replace(/authorization"?\s*[:=]\s*"?[^,";\s]+/gi, '[redacted]')
+    .slice(0, max)
+}
+
 /** Map a host synthesis failure onto the contract's error codes. */
-export function speakSynthesisErrorCode(error: unknown): 'auth' | 'quota' | 'network' | 'failed' {
+export function speakSynthesisErrorCode(error: unknown, aborted = false): 'cancelled' | 'timeout' | 'auth' | 'quota' | 'network' | 'failed' {
+  if (aborted) return 'cancelled'
+  const name = (error as { name?: unknown } | null)?.name
+  if (name === 'TimeoutError' || name === 'AbortError') return 'timeout'
   const status = (error as { status?: unknown } | null)?.status
   if (typeof status !== 'number') return 'network'
   if (status === 401 || status === 403) return 'auth'
@@ -393,6 +437,16 @@ function renderSpeakResult(value: unknown): TextContentBlock[] {
   const v = value as { chars: number; format: string; delivered: boolean; channel?: string }
   const delivered = v.delivered ? ` · delivered${v.channel !== undefined ? ` (${v.channel})` : ''}` : ' · not delivered'
   return [{ type: 'text', text: `${SPEAK_TOOL_NAME}: ${v.chars} chars · ${v.format}${delivered}` }]
+}
+
+/** Thrown by the delivery race when the channel hook exceeds its ceiling.
+ * Distinguishes "delivery may still complete channel-side" (keep the file)
+ * from a clean channel rejection (delete the file). */
+class DeliveryTimeoutError extends Error {
+  constructor(ceilingMs: number) {
+    super(`delivery timed out after ${Math.round(ceilingMs / 1000)}s`)
+    this.name = 'DeliveryTimeoutError'
+  }
 }
 
 /** Build the model-facing tool definition. Registration and lifecycle are the
@@ -514,9 +568,15 @@ export function createSpeakTool(deps: SpeakToolDeps): Record<string, unknown> {
         })
       } catch (error) {
         deps.limiter.release(sessionKey, slot.token)
-        const code = speakSynthesisErrorCode(error)
-        const detail = error instanceof Error ? error.message : String(error)
+        const code = speakSynthesisErrorCode(error, exec.signal?.aborted === true)
+        const detail = sanitizeErrorDetail(error instanceof Error ? error.message : String(error))
         throw speakError(code, `synthesis failed — ${detail}`)
+      }
+
+      // Absurdly large audio is rejected before it ever touches the disk.
+      if (audio.length > SPEAK_MAX_FILE_BYTES) {
+        deps.limiter.release(sessionKey, slot.token)
+        throw speakError('failed', `the synthesized clip is ${audio.length} bytes, over the ${SPEAK_MAX_FILE_BYTES}-byte cap — shorten the line`)
       }
 
       // Cancelled during synthesis: nothing may be delivered.
@@ -526,19 +586,44 @@ export function createSpeakTool(deps: SpeakToolDeps): Record<string, unknown> {
       }
 
       const outDir = deps.outDir()
-      mkdirSync(outDir, { recursive: true })
       const fileName = `speak-${now().toString(36)}-${randomUUID().slice(0, 8)}.${format}`
       const audioPath = join(outDir, fileName)
-      writeFileSync(audioPath, audio)
+      try {
+        mkdirSync(outDir, { recursive: true })
+        writeFileSync(audioPath, audio)
+      } catch (error) {
+        deps.limiter.release(sessionKey, slot.token)
+        const detail = sanitizeErrorDetail(error instanceof Error ? error.message : String(error))
+        throw speakError('failed', `could not write the audio file — ${detail}`)
+      }
 
       const claimed = deps.deliveries.find(sessionKey, agent)
       if (claimed !== undefined) {
         try {
-          await claimed.delivery.deliver({ audioPath, mime, text, sessionId: sessionKey, agent })
-        } catch (error) {
+          // Hard ceiling: a channel that never settles must not pin the
+          // exclusive tool pipeline (the harness does not enforce timeoutMs).
+          const deliverCeiling = deps.deliverTimeoutMs ?? SPEAK_DELIVER_TIMEOUT_MS
+          await Promise.race([
+            claimed.delivery.deliver({ audioPath, mime, text, sessionId: sessionKey, agent, signal: exec.signal }),
+            new Promise<never>((_, reject) => {
+              const timer = setTimeout(() => reject(new DeliveryTimeoutError(deliverCeiling)), deliverCeiling)
+              // Do not hold the event loop open for the rejection timer alone.
+              timer.unref?.()
+            }),
+          ])
+          // Delivered: the channel has consumed the file — free it now
+          // instead of letting it linger for the TTL.
           try { rmSync(audioPath, { force: true }) } catch { /* best effort */ }
+        } catch (error) {
+          if (!(error instanceof DeliveryTimeoutError)) {
+            // Clean channel rejection (filter hit, unresolved target, send
+            // failure): nothing was sent, so the file must not linger.
+            try { rmSync(audioPath, { force: true }) } catch { /* best effort */ }
+          }
+          // A timed-out delivery may still complete channel-side, so that
+          // file is intentionally left in place for the TTL sweep.
           deps.limiter.release(sessionKey, slot.token)
-          const detail = error instanceof Error ? error.message : String(error)
+          const detail = sanitizeErrorDetail(error instanceof Error ? error.message : String(error))
           throw speakError('voice-rejected', `the channel rejected the voice — ${detail}`)
         }
       }

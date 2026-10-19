@@ -161,8 +161,9 @@ export const SPEECH_TAGS: ReadonlySet<string> = new Set([
  * Clean a model-authored line into speakable text. The square brackets of
  * markdown are intentionally NOT in the symbol set — only link/image syntax
  * with a real URL scheme is unwrapped, so `[soft]` can never lose its
- * brackets here. Chinese-parenthesis asides (（尾巴晃来晃去）) pass through
- * untouched.
+ * brackets here. Parenthesis asides (（尾巴晃来晃去）, "(tail wagging)") are
+ * stage directions, not speech: they are removed so Fish cannot read them
+ * aloud. Identifier-style ASCII parentheses such as `f(3)` are left alone.
  */
 export function cleanSpeechText(input: string): string {
   return input
@@ -178,6 +179,10 @@ export function cleanSpeechText(input: string): string {
     .replace(/\b(?:https?:\/\/|www\.)\S+/g, ' ')
     // emoji, variation selectors, zero-width joiners
     .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, ' ')
+    // stage directions in parentheses: never spoken (Chinese parens always,
+    // ASCII parens unless they hug an identifier like f(3) / sin(x))
+    .replace(/（[^（）]*）/g, ' ')
+    .replace(/(?<![A-Za-z0-9])\([^()\n]*\)/g, ' ')
     // markdown emphasis/heading/quote/table/strike symbols — brackets excluded
     .replace(/[*_#>|~]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -484,7 +489,7 @@ export function createSpeakTool(deps: SpeakToolDeps): Record<string, unknown> {
       properties: {
         text: {
           type: 'string',
-          description: 'The words to speak. Fish bracket tags and Chinese-parenthesis asides pass through verbatim; markdown/code/links are stripped before synthesis.',
+          description: 'The words to speak. Fish bracket tags pass through verbatim; parenthetical stage directions, markdown, code and links are removed before synthesis.',
         },
         voice: {
           type: 'string',

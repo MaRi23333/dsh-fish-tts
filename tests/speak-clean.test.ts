@@ -13,8 +13,8 @@ import type { SavedVoice } from '../src/voices.ts'
 test('known emotion and sound tags pass through verbatim', () => {
   for (const tag of SPEECH_TAGS) {
     const line = `（小声）[${tag}] 你好呀`
-    assert.equal(cleanSpeechText(line), `（小声）[${tag}] 你好呀`, `tag [${tag}] must not be touched`)
-    assert.equal(dropUnknownTags(cleanSpeechText(line)), `（小声）[${tag}] 你好呀`)
+    assert.equal(cleanSpeechText(line), `[${tag}] 你好呀`, `tag [${tag}] must not be touched`)
+    assert.equal(dropUnknownTags(cleanSpeechText(line)), `[${tag}] 你好呀`)
   }
 })
 
@@ -25,10 +25,11 @@ test('brackets are never stripped as markdown symbols', () => {
   assert.ok(!cleaned.includes('*'))
 })
 
-test('chinese-parenthesis asides pass through untouched', () => {
-  const line = '（尾巴晃来晃去）来啦（小声嘀咕）'
-  assert.equal(cleanSpeechText(line), line)
-  assert.equal(dropUnknownTags(line), line)
+test('parenthetical stage directions are removed, not read aloud', () => {
+  assert.equal(cleanSpeechText('（尾巴晃来晃去）来啦（小声嘀咕）'), '来啦')
+  assert.equal(cleanSpeechText('晚安 (tail wagging)'), '晚安')
+  // identifier-style parentheses are not stage directions
+  assert.equal(cleanSpeechText('算一下 f(3)'), '算一下 f(3)')
 })
 
 test('unknown short bracketed tokens are dropped, not read aloud', () => {

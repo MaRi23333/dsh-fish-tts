@@ -81,7 +81,8 @@ test('happy path with a claiming channel: delivered, no absolute path in result,
 
   assert.equal(result.delivered, true)
   assert.equal(result.channel, 'qqbot')
-  assert.equal(result.chars, '[soft] 晚安，做个好梦（小声）'.length)
+  assert.equal(result.chars, '[soft] 晚安，做个好梦'.length, 'parenthetical asides are stripped before counting')
+  assert.ok(!sent[0].text.includes('小声'), 'stage directions never reach the channel')
   assert.ok(result.fileName === undefined, 'delivered results must not leak the file name')
   const serialized = JSON.stringify(result)
   assert.ok(!serialized.includes(h.outDir), 'result must never contain the absolute out dir')

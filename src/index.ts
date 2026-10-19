@@ -5,8 +5,18 @@
  *   POST /fish-tts/synthesize  { text, format? } -> raw audio bytes
  *   GET  /fish-tts/status      -> effective config summary (never the key)
  *   GET  /fish-tts/config      -> editable config (never the key)
- *   PUT  /fish-tts/config      -> { model?, voice?, savedVoices?, format?, apiKey?, clearKey? }
+ *   PUT  /fish-tts/config      -> { model?, voice?, savedVoices?, format?,
+ *                                   apiKey?, clearKey?, proxy?, speak? }
  *   GET  /fish-tts/models      -> Fish Audio TTS model ids (API when reachable, curated fallback)
+ *
+ * Agent-facing surfaces:
+ *   tool    fish_tts_speak — synthesize + deliver a voice bubble for chat
+ *           channels (line cleaning, per-conversation rate limit, loudness,
+ *           file lifecycle live here; see src/speak.ts). Registered while
+ *           the speech tool is enabled in the settings.
+ *   service ctx.fishTts.registerDelivery(channel, { claims?, deliver }) —
+ *           channel plugins (QQ bot) claim sessions and run their outbound
+ *           filter + sendVoice inside deliver.
  *
  * User-editable settings persist to $DSH_HOME/fish-tts/settings.json. An
  * API key stored there is encrypted with AES-256-GCM under a per-machine key
@@ -31,6 +41,19 @@ import s from '@deepseek-ai/schemastery'
 import { fetch as undiciFetch, ProxyAgent } from 'undici'
 import { normalizeSavedVoices } from './voices.ts'
 import type { SavedVoice } from './voices.ts'
+import {
+  DEFAULT_SPEAK_SETTINGS,
+  DeliveryRegistry,
+  RateLimiter,
+  SPEAK_FILE_TTL_MS,
+  SPEAK_SYNTH_TIMEOUT_MS,
+  SPEAK_TOOL_NAME,
+  cleanupSpeakFiles,
+  createSpeakTool,
+  normalizeSpeakPatch,
+  normalizeSpeakSettings,
+} from './speak.ts'
+import type { SpeakDelivery, SpeakSettings, SpeakSynthesisRequest } from './speak.ts'
 // Type-only: merges ctx.webServer into Context.
 import type {} from '@deepseek-ai/dsh-host-webserver'
 
@@ -87,6 +110,8 @@ interface SettingsFile {
   format?: string
   proxy?: string
   apiKeyCipher?: ApiKeyCipher
+  /** Speech-tool settings (fish_tts_speak); absent = defaults. */
+  speak?: SpeakSettings
 }
 
 /** Effective runtime settings (in-memory; the settings file is the source of truth). */
@@ -95,6 +120,8 @@ interface EffectiveSettings {
   voice: string
   format: string
   proxy: string
+  /** Speech-tool settings; defaults when nothing is stored. */
+  speak: SpeakSettings
   /** Decrypted stored key, or '' when none. */
   storedKey: string
   hasStoredKey: boolean
@@ -182,7 +209,7 @@ function redactProxy(url: string): string {
 
 /** Thrown when a settings patch must not be persisted. */
 class SettingsError extends Error {
-  constructor(message: string, readonly code: 'invalid-proxy' | 'invalid-saved-voices' = 'invalid-proxy') {
+  constructor(message: string, readonly code: 'invalid-proxy' | 'invalid-saved-voices' | 'invalid-speak' = 'invalid-proxy') {
     super(message)
     this.name = 'SettingsError'
   }
@@ -373,6 +400,7 @@ class SettingsStore {
         savedVoices: parsed.savedVoices === undefined ? undefined : normalizeSavedVoices(parsed.savedVoices) ?? [],
         format: typeof parsed.format === 'string' ? parsed.format : undefined,
         proxy: typeof parsed.proxy === 'string' ? parsed.proxy : undefined,
+        speak: parsed.speak === undefined ? undefined : normalizeSpeakSettings(parsed.speak) ?? undefined,
         apiKeyCipher: typeof parsed.apiKeyCipher === 'object' && parsed.apiKeyCipher !== null
           ? parsed.apiKeyCipher as ApiKeyCipher
           : undefined,
@@ -405,7 +433,8 @@ class SettingsStore {
     // effective, are never persisted, and never appear in responses.
     const rawProxy = (this.file.proxy ?? '').trim() || (config.proxy ?? '').trim() || ''
     const proxy = sanitizeSeedProxy(rawProxy) ?? ''
-    return { model, voice, format, proxy, storedKey, hasStoredKey: this.file.apiKeyCipher !== undefined }
+    const speak = this.file.speak ?? DEFAULT_SPEAK_SETTINGS
+    return { model, voice, format, proxy, speak, storedKey, hasStoredKey: this.file.apiKeyCipher !== undefined }
   }
 
   /** Apply an edit patch; empty strings clear the field, undefined keeps it. */
@@ -417,6 +446,8 @@ class SettingsStore {
     proxy?: string
     apiKey?: string
     clearKey?: boolean
+    /** Speech-tool settings; provided keys are merged over the stored values. */
+    speak?: unknown
   }): void {
     // Validate the whole patch before changing any settings. Both invalid
     // bookmarks and proxies must reject all accompanying fields.
@@ -427,6 +458,15 @@ class SettingsStore {
         throw new SettingsError('savedVoices must contain up to 100 unique voices with valid id, name and note', 'invalid-saved-voices')
       }
       nextSavedVoices = normalized
+    }
+    let nextSpeak: SpeakSettings | undefined
+    if (Object.hasOwn(patch, 'speak')) {
+      const normalized = normalizeSpeakPatch(patch.speak)
+      if (normalized === null) {
+        throw new SettingsError('speak must contain enabled (bool), format (mp3|wav|opus), maxChars (50-1000), perMinute (0-30), loudness (bool) and volumeDb (-20..20) when present', 'invalid-speak')
+      }
+      // Merge over the current values so clients can patch a single field.
+      nextSpeak = { ...(this.file.speak ?? DEFAULT_SPEAK_SETTINGS), ...normalized }
     }
     let nextProxy: string | undefined
     if (patch.proxy !== undefined) {
@@ -443,6 +483,9 @@ class SettingsStore {
     }
     if (nextSavedVoices !== undefined) {
       nextFile.savedVoices = nextSavedVoices
+    }
+    if (nextSpeak !== undefined) {
+      nextFile.speak = nextSpeak
     }
     if (patch.format !== undefined) {
       const format = patch.format.trim().toLowerCase()
@@ -467,6 +510,7 @@ class SettingsStore {
     savedVoices: SavedVoice[]
     format: string
     proxy: string
+    speak: SpeakSettings
     keyConfigured: boolean
     hasStoredKey: boolean
   } {
@@ -477,6 +521,7 @@ class SettingsStore {
       savedVoices: normalizeSavedVoices(this.file.savedVoices ?? []) ?? [],
       format: eff.format,
       proxy: redactProxy(eff.proxy),
+      speak: eff.speak,
       keyConfigured: eff.storedKey !== '' || resolveEnvKey(config) !== '',
       hasStoredKey: eff.hasStoredKey,
     }
@@ -520,6 +565,7 @@ async function synthesize(
   apiKey: string,
   proxies: readonly string[],
   agents: AgentCache,
+  opts: { signal?: AbortSignal; timeoutMs?: number; prosody?: Record<string, unknown> } = {},
 ): Promise<Buffer> {
   const payload = JSON.stringify({
     text,
@@ -527,6 +573,7 @@ async function synthesize(
     format,
     normalize: true,
     latency: 'balanced',
+    ...(opts.prosody !== undefined ? { prosody: opts.prosody } : {}),
   })
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -537,7 +584,9 @@ async function synthesize(
   let lastError: SynthesisError = { status: 0, message: 'unknown error' }
   for (const proxy of attempts) {
     try {
-      const signal = AbortSignal.timeout(60_000)
+      const signal = opts.signal !== undefined
+        ? AbortSignal.any([opts.signal, AbortSignal.timeout(opts.timeoutMs ?? 60_000)])
+        : AbortSignal.timeout(opts.timeoutMs ?? 60_000)
       const response = proxy === null
         ? await undiciFetch(API_URL, { method: 'POST', headers, body: payload, signal })
         : await undiciFetch(API_URL, { method: 'POST', headers, body: payload, dispatcher: agents.get(proxy), signal })
@@ -671,6 +720,74 @@ export function apply(ctx: Context, config: Config): void {
     const envNormalized = proxyOf(envProxy ?? '')
     if (envNormalized !== null && !proxies.includes(envNormalized)) proxies.push(envNormalized)
     return proxies
+  }
+
+  // ── speech tool (fish_tts_speak) + channel delivery hooks ────────────────
+  // Channel plugins (e.g. the QQ bot) call ctx.fishTts.registerDelivery to
+  // claim sessions and deliver generated voice files; everything upstream of
+  // the actual send — line cleaning, limits, loudness, file lifecycle — lives
+  // here so it stays identical across channels.
+  const deliveries = new DeliveryRegistry()
+  const limiter = new RateLimiter()
+  const speakOutDir = (): string => join(store.stateDir, 'out')
+  const loggerLike = (ctx as { logger?: { info?: (message: string) => void } }).logger
+  const speakLog = (message: string): void => {
+    try { loggerLike?.info?.(`fish-tts: ${message}`) } catch { /* logging must never break the tool */ }
+  }
+
+  /** Tool-path synthesis: prosody from the speak settings, a tighter timeout,
+   * the caller's abort signal, and the shared in-memory cache (the prosody
+   * signature is part of the key so read-aloud entries never collide). */
+  const speakSynthesize = async (request: SpeakSynthesisRequest): Promise<Buffer> => {
+    const eff = store.effective(config)
+    const prosody = request.loudness || request.volumeDb !== 0
+      ? {
+          ...(request.volumeDb !== 0 ? { volume: request.volumeDb } : {}),
+          ...(request.loudness ? { normalize_loudness: true } : {}),
+        }
+      : undefined
+    const key = cacheKey(`${eff.model}\u0000${request.voice}\u0000${request.format}\u0000${request.text}`)
+      + (prosody !== undefined ? `\u0000prosody\u0000${JSON.stringify(prosody)}` : '')
+    const cached = cache.get(key)
+    if (cached !== undefined) return cached
+    const proxies = await buildProxies()
+    const audio = await synthesize(request.text, request.voice, eff.model, request.format, store.apiKey(config), proxies, { get: getAgent }, {
+      signal: request.signal,
+      timeoutMs: SPEAK_SYNTH_TIMEOUT_MS,
+      ...(prosody !== undefined ? { prosody } : {}),
+    })
+    if (cache.size >= CACHE_LIMIT) {
+      const oldest = cache.keys().next().value
+      if (oldest !== undefined) cache.delete(oldest)
+    }
+    cache.set(key, audio)
+    return audio
+  }
+
+  /** Register or unregister fish_tts_speak following the tools service and
+   * the enabled flag; safe to call repeatedly (idempotent teardown first). */
+  let disposeTool: (() => void) | null = null
+  const syncSpeakTool = (): void => {
+    if (disposeTool !== null) {
+      disposeTool()
+      disposeTool = null
+    }
+    const tools = ctx.get('tools') as { register?: (definition: unknown) => unknown } | undefined
+    if (tools?.register === undefined) return
+    if (!store.effective(config).speak.enabled) return
+    const dispose = tools.register(createSpeakTool({
+      settings: () => store.effective(config).speak,
+      defaultVoice: () => store.effective(config).voice,
+      savedVoices: () => store.summary(config).savedVoices,
+      hasApiKey: () => store.apiKey(config) !== '',
+      model: () => store.effective(config).model,
+      synthesize: speakSynthesize,
+      deliveries,
+      limiter,
+      outDir: speakOutDir,
+      log: speakLog,
+    }))
+    disposeTool = typeof dispose === 'function' ? dispose as (() => void) : null
   }
 
   // Local-only threat model (FISH-SEC-002): this plugin serves configuration,
@@ -838,6 +955,7 @@ export function apply(ctx: Context, config: Config): void {
           if (typeof body['proxy'] === 'string') patch.proxy = body['proxy']
           if (typeof body['apiKey'] === 'string') patch.apiKey = body['apiKey']
           if (body['clearKey'] === true) patch.clearKey = true
+          if (body['speak'] !== undefined) patch.speak = body['speak']
           try {
             store.update(patch)
           } catch (error) {
@@ -848,6 +966,8 @@ export function apply(ctx: Context, config: Config): void {
             }
             return
           }
+          // The tool's registration follows the enabled flag immediately.
+          syncSpeakTool()
           sendJson(res, 200, { ok: true, ...store.summary(config) })
           return
         }
@@ -870,6 +990,34 @@ export function apply(ctx: Context, config: Config): void {
         sendJson(res, 200, { ok: true, models: ids.length > 0 ? ids : FALLBACK_MODELS, live: ids.length > 0 })
       },
     }), 'fish-tts: models route')
+  }
+
+  // ── plugin surfaces ──────────────────────────────────────────────────────
+  // Delivery hooks for channel plugins: ctx.fishTts.registerDelivery(channel,
+  // { claims?, deliver }) — see SpeakDelivery in speak.ts for the contract.
+  ctx.effect(() => ctx.provide('fishTts', {
+    registerDelivery: (channel: string, delivery: unknown): (() => void) =>
+      deliveries.register(channel, delivery as SpeakDelivery),
+  }), 'fish-tts: fishTts service (channel delivery hooks)')
+
+  // Leftover voice files from previous runs are swept once at startup.
+  cleanupSpeakFiles(speakOutDir(), SPEAK_FILE_TTL_MS)
+
+  // The tool follows the tools service (it may load after this bundle row)
+  // and the speak.enabled flag (PUT /config re-runs the sync).
+  ctx.effect(() => {
+    syncSpeakTool()
+    return () => {
+      if (disposeTool !== null) {
+        disposeTool()
+        disposeTool = null
+      }
+    }
+  }, `fish-tts: ${SPEAK_TOOL_NAME} lifecycle`)
+  if (ctx.get('tools') === undefined) {
+    ctx.on('internal/service', (service: string) => {
+      if (service === 'tools') syncSpeakTool()
+    })
   }
 
   if (ctx.get('webServer') !== undefined) {

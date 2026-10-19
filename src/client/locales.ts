@@ -103,8 +103,20 @@ export type FishTtsKey =
   | 'settings.autoplay'
   | 'settings.autoplay.hint'
   | 'settings.volume'
+  | 'settings.volume.hint'
   | 'settings.speed'
   | 'settings.speed.unsupported'
+  | 'settings.speak.section'
+  | 'settings.speak.hint'
+  | 'settings.speak.enabled'
+  | 'settings.speak.format'
+  | 'settings.speak.maxChars'
+  | 'settings.speak.perMinute'
+  | 'settings.speak.loudness'
+  | 'settings.speak.loudness.hint'
+  | 'settings.speak.volumeDb'
+  | 'settings.speak.saved'
+  | 'settings.speak.invalid'
   | 'settings.test'
   | 'settings.test.playing'
   | 'settings.test.stop'
@@ -217,9 +229,21 @@ export const zh: Record<FishTtsKey, string> = {
   'settings.status.keyMissing': '未配置 API Key',
   'settings.autoplay': '新回复自动朗读',
   'settings.autoplay.hint': '仅自动朗读页面打开后产生的新回复，不会重播历史消息。',
-  'settings.volume': '音量',
+  'settings.volume': '试听音量',
+  'settings.volume.hint': '只影响网页里朗读的音量；不影响合成响度，也不影响发给 QQ 等通道的语音文件。',
   'settings.speed': '播放速度',
   'settings.speed.unsupported': '当前浏览器不支持倍速播放，已固定为 1×',
+  'settings.speak.section': '语音工具（智能体调用）',
+  'settings.speak.hint': '供 QQ 等聊天通道的智能体把台词合成为语音条并发送；网页消息朗读不经过这里。',
+  'settings.speak.enabled': '启用语音工具',
+  'settings.speak.format': '语音格式',
+  'settings.speak.maxChars': '单条文本上限（字）',
+  'settings.speak.perMinute': '每分钟上限（0 为停用）',
+  'settings.speak.loudness': '响度归一化（服务端）',
+  'settings.speak.loudness.hint': '由 Fish Audio 服务端归一化响度，多条语音听感一致；s1 系模型不支持，自定义 -16 LUFS 目标暂无 API 参数。',
+  'settings.speak.volumeDb': '音量微调（dB）',
+  'settings.speak.saved': '语音工具设置已保存',
+  'settings.speak.invalid': '语音工具设置不合法，请检查取值范围',
   'settings.test': '试听当前音色',
   'settings.test.playing': '正在生成试听语音，可点击停止试听取消…',
   'settings.test.stop': '停止试听',
@@ -327,9 +351,21 @@ export const en: Record<FishTtsKey, string> = {
   'settings.status.keyMissing': 'No API key configured',
   'settings.autoplay': 'Read new replies automatically',
   'settings.autoplay.hint': 'Only replies that arrive after this page loaded are read automatically; history is never replayed.',
-  'settings.volume': 'Volume',
+  'settings.volume': 'Preview volume',
+  'settings.volume.hint': 'Affects in-page read-aloud only — not synthesis loudness, and not voice files delivered to chat channels.',
   'settings.speed': 'Playback speed',
   'settings.speed.unsupported': 'This browser does not support pitch-preserving speed control; playback stays at 1×',
+  'settings.speak.section': 'Speech tool (agent calls)',
+  'settings.speak.hint': 'Lets chat-channel agents (e.g. QQ) synthesize and deliver a voice bubble; in-page read-aloud does not use this.',
+  'settings.speak.enabled': 'Enable the speech tool',
+  'settings.speak.format': 'Voice format',
+  'settings.speak.maxChars': 'Max chars per line',
+  'settings.speak.perMinute': 'Max sends per minute (0 disables)',
+  'settings.speak.loudness': 'Loudness normalize (server-side)',
+  'settings.speak.loudness.hint': 'Fish Audio normalizes loudness server-side so clips sound even; not supported on s1 models. No API parameter exists for a custom LUFS target.',
+  'settings.speak.volumeDb': 'Volume trim (dB)',
+  'settings.speak.saved': 'Speech tool settings saved',
+  'settings.speak.invalid': 'Invalid speech tool settings — check the value ranges',
   'settings.test': 'Preview current voice',
   'settings.test.playing': 'Preparing audio… Select Stop preview to cancel.',
   'settings.test.stop': 'Stop preview',

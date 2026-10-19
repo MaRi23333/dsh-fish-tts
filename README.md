@@ -37,12 +37,14 @@
 - **朗读按钮**：每条定稿的助手消息操作条里有一个「朗读 / Read aloud」按钮（图标与原生操作条图标同风格），点击合成并播放该条回复；**播放中再次点击该消息的按钮即中断停止**（不会从头重播），点击其他消息的按钮则直接切换播放，合成等待中再点一次可取消。markdown 会被清洗：路径 / URL / 长编号 / 代码块不会读出来。
 - **自动朗读**：输入框工具行的小喇叭开关（与设置页同步），开启后自动朗读页面加载后产生的新回复。
 - **常用音色收藏**：为音色 ID 保存易辨识的名称和多行备注，从下拉列表直接切换并立即生效。收藏保存在本机；切换保留其他未保存设置，移除收藏也不会清空当前音色。
+- **语音工具 `fish_tts_speak`**：聊天通道（如 QQ 机器人）的智能体可把台词合成为语音条并投递。台词清洗、每会话限频、服务端响度归一化与音频文件 24 小时清理都在本插件完成；Fish 情绪/声音方括号标签（`[soft]`、`[laughing]` 等）原样透传、不被念出来。通道插件通过 `ctx.fishTts.registerDelivery` 注册投递器，出站敏感词过滤仍在通道侧执行。
 - **设置页**（Settings → 语音朗读 / Voice (Fish TTS)）：
   - TTS 模型（下拉建议 + 手动输入，支持 s2.1-pro-free / s2.1-pro / s2-pro 等，保存后立即生效；默认 s2.1-pro-free）
   - 音色 `reference_id`（可直接输入、修改或清空，无须收藏；合成需要有效 ID，插件不提供默认音色）
   - API Key（**AES-256-GCM 加密存储**在本机 `$DSH_HOME/fish-tts/settings.json`，密钥文件 `key.bin` 自动生成并在 Windows 上收紧 ACL；Key 不会出现在任何 GET 响应、日志或仓库中）
   - HTTP 代理（例如 `http://127.0.0.1:7890`，直连不通时可填）
-  - 试听／停止试听按钮、自动朗读开关、音量滑条（默认 60%）、倍速滑条（0.5–2.0×，不变调；浏览器不支持时固定 1×）
+  - 语音工具：开关、格式（mp3/wav/opus）、单条文本上限、每分钟上限（0 为停用）、服务端响度归一化开关、音量微调（-20~+20 dB）
+  - 试听／停止试听按钮、自动朗读开关、试听音量滑条（默认 60%，仅影响网页朗读）、倍速滑条（0.5–2.0×，不变调；浏览器不支持时固定 1×）
 - **双语界面**（中文 / English，跟随 DSH 语言设置；en 词条与 zh 完全对齐）。
 
 ## 界面截图
@@ -74,10 +76,41 @@
 
 ## 安装
 
-一条命令，从 npm 安装（推荐）：
+桌面客户端与 Web 实例的插件安装及启用状态完全独立。请根据你使用的运行环境选择对应方式：
+
+### 桌面客户端安装（推荐）
+
+通过桌面客户端界面安装（无需配置命令行）：
+
+1. 打开桌面客户端左侧栏**「插件 / Plugins」**，点击右上角**「添加插件 / Add plugin」**；
+2. 输入 npm 包名 `dsh-fish-tts@latest` 并确认安装；
+3. 安装完成后点击**「立即启用 / Enable now」**（若直接关闭安装完成弹窗，插件会保留在已安装列表中但处于未启用状态）；
+4. 仅在界面提示需要重启时，通过菜单完整退出应用（**Quit**）后重新打开（在 Windows / macOS 上直接关闭窗口可能仅隐藏到后台）；
+5. 识别点：打开 **Settings**，确认侧栏设置项中出现**「语音朗读 / Voice (Fish TTS)」**。
+
+<details>
+<summary>备选：桌面端终端安装（Windows / macOS）</summary>
+
+若偏好终端管理，可使用桌面配套 CLI：
+
+1. 在桌面客户端应用菜单中选择 **Manage dsh Command…** → **Install**（注册桌面配套命令，若提示 PATH 冲突按其指引处理），并打开新终端；
+2. 确保桌面客户端已至少启动过一次以完成初始化，并先通过 **Quit** 完整退出桌面客户端；
+3. 在新终端中执行桌面专用命令安装与检查：
+   ```sh
+   dsh plugin --profile desktop add dsh-fish-tts@latest
+   dsh plugin --profile desktop list
+   ```
+4. 重新启动桌面客户端。
+
+> 注意：通过外部 npm / npx 安装的普通 `dsh` CLI 无法管理 desktop profile。关于桌面配套命令机制，详见官方桌面端文档的 [bundled-command-runtime](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.1-rc.2/apps/desktop/README.md#bundled-command-runtime)。
+</details>
+
+### Web 实例安装
+
+Web 实例通过匹配的命令行工具进行管理。优先使用启动该 Web 实例的同一套匹配宿主的 `dsh` CLI：
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts
+dsh plugin --profile web add dsh-fish-tts@latest
 ```
 
 然后**重启 dsh web**（关掉终端重新运行 `dsh web`）并刷新页面，打开 **Settings → 语音朗读**。
@@ -85,19 +118,19 @@ npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts
 其他安装方式：
 
 ```sh
-# 从 GitHub 安装（git-hosted 插件会在安装时构建）
-npx @deepseek-ai/dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
+# 从 GitHub 安装（仓库已附 lib 产物，无需本地构建）
+dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
 
 # 从本地目录安装
 git clone https://github.com/MaRi23333/dsh-fish-tts.git
 cd dsh-fish-tts
 pnpm install && pnpm run build
-npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
+dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ```
 
 > 仓库已提交 `lib/` 构建产物，git 安装无需本地构建；改源码后运行 `pnpm run build` 再重启即可。
 
-> **从 GitHub 版换到 npm 源**：裸包名 `add dsh-fish-tts` 对已装的 git 版是静默空操作（pnpm 判定同名依赖已满足）。请改用 `npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts@latest`，或先 `remove` 再 `add`。
+> **说明**：若使用 `npx` 执行安装命令，请固定为与你的 Web 宿主相同的版本（例如 `npx @deepseek-ai/dsh@<version>`）。从 GitHub 版换到 npm 源时，裸包名 `add dsh-fish-tts` 对已装的 git 版是静默空操作（pnpm 判定同名依赖已满足），请改用带 `@latest` 的命令明确请求 npm 上的最新版本，或先 `remove` 再 `add`。
 
 > 安装刚发布的 npm 版本时，pnpm 的供应链保护可能自动在 profile 的 `pnpm-workspace.yaml` 写入 `minimumReleaseAgeExclude: [dsh-fish-tts@…]`，属正常行为，不影响使用。
 
@@ -144,6 +177,23 @@ npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 | `proxy` | `''` | HTTP(S) 代理（设置页保存值优先） |
 | `stateDir` | `$DSH_HOME/fish-tts` | 设置/密钥文件目录 |
 
+### 语音工具（fish_tts_speak）
+
+供聊天通道插件（如 QQ 机器人）的智能体调用：模型传入台词，插件完成清洗 → 合成 → 投递。通道在宿主上下文注册投递器，出站敏感词过滤与目标会话解析留在通道侧：
+
+```ts
+// 通道插件内（如 qqbot）
+const fishTts = ctx.get('fishTts')
+ctx.effect(() => fishTts.registerDelivery('qqbot', {
+  // 可选：声明哪些会话归本通道（缺省视为全部认领）
+  claims: (sessionId, agent) => manager.findByAgent(agent) !== undefined,
+  // 出站过滤 → 命中抛错（不投递）→ 解析目标 → 发送语音
+  deliver: async ({ audioPath, mime, text, sessionId, agent }) => { /* … */ },
+}), 'qqbot: fish-tts delivery')
+```
+
+工具契约要点：输入 `{ text, voice?, format? }`（`voice` 支持收藏名或原始 reference_id）；输出只含长度、格式、MIME 与投递状态，**不含绝对路径与台词内容**；错误按 `rate-limited` / `text-too-long` / `auth` / `quota` / `network` / `voice-rejected` 等代码前缀返回，模型可据此改用文字回复。每会话每分钟上限（默认 1，0 为停用）在合成前占槽、失败释放；未投递时音频保留在 `$DSH_HOME/fish-tts/out/`（24 小时后顺手清理）。响度归一化由 Fish Audio 服务端完成（`prosody.normalize_loudness`，s1 系模型不支持），另附 -20~+20 dB 音量微调。
+
 ## 安全
 
 - API Key 只以加密形态落盘（AES-256-GCM，每机随机密钥 `key.bin`，0600/ACL 收紧），不写入仓库、日志或任何 GET 响应。
@@ -152,6 +202,7 @@ npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 - **代理不支持带用户名密码的地址**（`http://user:pass@host:port` 会在保存时被拒绝）；环境变量 `HTTPS_PROXY`/`HTTP_PROXY` 若带凭据同样会被忽略（不泄露、无回退），请改用无凭据的代理或直连。
 - 代理地址、模型、音色均为用户本机设置，仓库不携带任何个人信息。
 - 合成请求的文本上限 12000 字符；结果在进程内缓存（最多 200 条），重启即清。
+- 语音工具的结果只含长度、格式与投递状态，不含绝对路径、台词或任何身份标识；生成的音频只落本机 `$DSH_HOME/fish-tts/out/`，日志只记字节数与字数。
 
 ## 开发
 

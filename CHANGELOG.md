@@ -1,5 +1,18 @@
 # 更新记录 / Changelog
 
+## 0.3.0（2026-10-19）
+
+- 新增模型可调用的语音工具 `fish_tts_speak`：聊天通道（如 QQ 机器人）的智能体可把台词合成为语音条并投递；台词清洗、每会话限频、响度与音频文件生命周期都在本插件，通道只注册投递器并保留自己的出站过滤。
+- Added the model-callable speech tool `fish_tts_speak`: chat-channel agents (e.g. a QQ bot) can synthesize and deliver voice bubbles. Line cleaning, per-conversation rate limiting, loudness and the audio file lifecycle live in this plugin; channels only register a delivery hook and keep their own outbound filtering.
+- 台词处理以现网事故为防线：Fish 情绪/声音方括号标签原样透传（严禁剥掉方括号），中文括号旁白不删不改，只清理代码块、URL、markdown 符号与 emoji；未知英文标签形 token 静默忽略，中文引用类方括号内容永不误删。
+- Speech-line processing pins the incident class: Fish bracket tags pass through verbatim (brackets are never stripped), Chinese-parenthesis asides stay untouched, and only code blocks, URLs, markdown symbols and emoji are removed. Unknown English-tag-shaped tokens are dropped silently; CJK bracketed content is never touched.
+- 每会话每分钟上限（默认 1，0 为停用）先占槽后合成、失败释放，防并发绕过；错误携带剩余秒数并区分 rate-limited / text-too-long / auth / quota / network / voice-rejected 等模型可读代码，超时 20 秒、取消后绝不投递。
+- The per-conversation per-minute limit (default 1; 0 disables) claims the send slot before synthesis and releases it on failure, closing the concurrent bypass. Errors carry remaining seconds and distinct model-readable codes (rate-limited / text-too-long / auth / quota / network / voice-rejected, …); the call times out at 20 s and nothing is delivered after cancellation.
+- 响度归一化由 Fish Audio 服务端完成（`prosody.normalize_loudness`，s1 系模型不支持），附 -20~+20 dB 音量微调；设置页新增「语音工具」分组（开关、格式、上限、限频、响度、音量微调，即改即生效），原「音量」更名「试听音量」并说明只影响网页朗读。
+- Loudness is normalized server-side by Fish Audio (`prosody.normalize_loudness`; unsupported on s1 models) with a -20..+20 dB volume trim. The settings page gains a "Speech tool" group (toggle, format, limits, rate, loudness, trim — effective immediately), and the old "Volume" row is renamed "Preview volume", clarified as in-page only.
+- 跨通道投递经 `ctx.fishTts.registerDelivery(channel, { claims?, deliver })` 注册：`claims` 声明会话归属，`deliver` 内执行通道出站过滤后发送，拒收即报 `voice-rejected` 且不落文件；未投递时音频保留在 `$DSH_HOME/fish-tts/out/`（24 小时 TTL 顺手清理），工具结果只含长度、格式与投递状态，不含绝对路径与台词。
+- Channels register through `ctx.fishTts.registerDelivery(channel, { claims?, deliver })`: `claims` declares session ownership, `deliver` runs the channel's outbound filter before sending, and a rejection surfaces as `voice-rejected` with no file left behind. Undelivered audio stays in `$DSH_HOME/fish-tts/out/` (24 h opportunistic TTL); tool results carry sizes, format and delivery status only — no absolute paths, no spoken content.
+
 ## 0.2.13（2026-10-07）
 
 - 常用音色可保存名称和多行备注，下拉选择后立即生效；移除收藏保留当前音色，兼容原设置与加密 Key。

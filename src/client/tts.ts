@@ -4,6 +4,20 @@
  * explicit auto-play opt-in), and stop/replace any currently playing clip.
  */
 import type { SavedVoice } from '../voices.ts'
+// Type-only: speak.ts top-level-imports node:fs and must never enter the
+// browser bundle. The runtime fallback below mirrors its defaults.
+import type { SpeakSettings } from '../speak.ts'
+
+/** Mirrors DEFAULT_SPEAK_SETTINGS in src/speak.ts (kept client-local so the
+ * node-only module stays out of the browser bundle). */
+const DEFAULT_SPEAK: SpeakSettings = {
+  enabled: true,
+  format: 'mp3',
+  maxChars: 300,
+  perMinute: 1,
+  loudness: true,
+  volumeDb: 0,
+}
 
 export interface TtsStatus {
   ok: boolean
@@ -23,6 +37,7 @@ export interface TtsConfig {
   voice: string
   format: string
   proxy: string
+  speak: SpeakSettings
   keyConfigured: boolean
   hasStoredKey: boolean
   savedVoices: SavedVoice[]
@@ -313,11 +328,11 @@ export class FishTtsPlayer {
   async config(): Promise<TtsConfig> {
     try {
       const response = await fetch('/fish-tts/config', { cache: 'no-store' })
-      if (!response.ok) return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: `HTTP ${response.status}` }
+      if (!response.ok) return { ok: false, model: '', voice: '', format: 'wav', proxy: '', speak: DEFAULT_SPEAK, keyConfigured: false, hasStoredKey: false, savedVoices: [], error: `HTTP ${response.status}` }
       const payload = await response.json() as TtsConfig
-      return { ...payload, savedVoices: payload.savedVoices ?? [] }
+      return { ...payload, speak: payload.speak ?? DEFAULT_SPEAK, savedVoices: payload.savedVoices ?? [] }
     } catch (error) {
-      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: error instanceof Error ? error.message : 'config fetch failed' }
+      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', speak: DEFAULT_SPEAK, keyConfigured: false, hasStoredKey: false, savedVoices: [], error: error instanceof Error ? error.message : 'config fetch failed' }
     }
   }
 
@@ -330,6 +345,7 @@ export class FishTtsPlayer {
     apiKey?: string
     clearKey?: boolean
     savedVoices?: SavedVoice[]
+    speak?: Partial<SpeakSettings>
   }): Promise<TtsConfig> {
     try {
       const response = await fetch('/fish-tts/config', {
@@ -339,11 +355,11 @@ export class FishTtsPlayer {
       })
       const payload = await response.json() as (TtsConfig & { message?: string })
       if (!response.ok || payload.ok !== true) {
-        return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: payload.message ?? payload.error ?? `HTTP ${response.status}` }
+        return { ok: false, model: '', voice: '', format: 'wav', proxy: '', speak: DEFAULT_SPEAK, keyConfigured: false, hasStoredKey: false, savedVoices: [], error: payload.message ?? payload.error ?? `HTTP ${response.status}` }
       }
-      return { ...payload, savedVoices: payload.savedVoices ?? [] }
+      return { ...payload, speak: payload.speak ?? DEFAULT_SPEAK, savedVoices: payload.savedVoices ?? [] }
     } catch (error) {
-      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', keyConfigured: false, hasStoredKey: false, savedVoices: [], error: error instanceof Error ? error.message : 'config save failed' }
+      return { ok: false, model: '', voice: '', format: 'wav', proxy: '', speak: DEFAULT_SPEAK, keyConfigured: false, hasStoredKey: false, savedVoices: [], error: error instanceof Error ? error.message : 'config save failed' }
     }
   }
 

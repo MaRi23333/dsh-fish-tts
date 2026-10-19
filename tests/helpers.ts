@@ -28,17 +28,24 @@ export function makeWeb(): MockWeb {
 
 export interface MockCtx {
   cleanups: Array<() => void>
+  /** Services registered through ctx.provide (e.g. the fishTts delivery API). */
+  provided: Map<string, unknown>
   get: (key: string) => unknown
   on: () => () => void
   effect: (fn: () => unknown) => void
+  provide: (name: string, value: unknown) => () => void
 }
 
 export function makeCtx(web: MockWeb): MockCtx {
   const cleanups: Array<() => void> = []
+  const provided = new Map<string, unknown>()
   return {
     cleanups,
+    provided,
     get(key: string): unknown {
-      return key === 'webServer' ? web : undefined
+      if (key === 'webServer') return web
+      if (provided.has(key)) return provided.get(key)
+      return undefined
     },
     on(): () => void {
       return () => {}
@@ -46,6 +53,12 @@ export function makeCtx(web: MockWeb): MockCtx {
     effect(fn: () => unknown): void {
       const result = fn()
       if (typeof result === 'function') cleanups.push(result as () => void)
+    },
+    provide(name: string, value: unknown): () => void {
+      provided.set(name, value)
+      return () => {
+        if (provided.get(name) === value) provided.delete(name)
+      }
     },
   }
 }

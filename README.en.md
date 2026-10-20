@@ -87,10 +87,41 @@ This statement reflects maintainer usage feedback, not verification of every ope
 
 ## Install
 
-One command, from npm (recommended):
+Desktop and Web have separate plugin installations and activation states. Choose the method matching your environment:
+
+### Desktop Installation (Recommended)
+
+Install directly within the desktop client UI (no command-line setup required):
+
+1. Open **Plugins** in the desktop left sidebar, then click **Add plugin**;
+2. Enter the npm package name `dsh-fish-tts@latest` and install;
+3. Once installation completes, click **Enable now** (closing the dialog without enabling leaves the plugin installed but disabled);
+4. Only if the UI indicates a restart is required, fully quit the application via the menu (**Quit**) and reopen it (closing the window may only hide it to the background);
+5. Verification: Open **Settings** and confirm **Voice (Fish TTS)** appears in the settings sidebar.
+
+<details>
+<summary>Alternative: Desktop terminal installation (Windows / macOS)</summary>
+
+If you prefer using the command line, use the desktop-bundled CLI:
+
+1. In the desktop application menu, select **Manage dsh Command…** → **Install** (register the bundled CLI and follow any reported PATH conflict instructions), then open a new terminal;
+2. Ensure the desktop app has been launched at least once to initialize, and fully exit via **Quit**;
+3. Run the desktop-profile commands in your terminal to install and verify:
+   ```sh
+   dsh plugin --profile desktop add dsh-fish-tts@latest
+   dsh plugin --profile desktop list
+   ```
+4. Reopen the desktop application.
+
+> Note: Standalone `dsh` installed via npm or run via `npx` cannot manage the desktop profile. For details on how the bundled command runtime works, see [bundled-command-runtime](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.1-rc.2/apps/desktop/README.md#bundled-command-runtime) in the official desktop documentation.
+</details>
+
+### Web Installation
+
+Manage Web plugins using the matching CLI. Prefer using the same host-matched `dsh` CLI that launches your Web instance:
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts
+dsh plugin --profile web add dsh-fish-tts@latest
 ```
 
 Then **restart `dsh web`** (stop the process, run `dsh web` again), refresh the page, and open **Settings → Voice (Fish TTS)**.
@@ -98,23 +129,20 @@ Then **restart `dsh web`** (stop the process, run `dsh web` again), refresh the 
 Other install sources:
 
 ```sh
-# From GitHub (git-hosted plugins build on install)
-npx @deepseek-ai/dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
+# From GitHub (the repository includes lib artifacts; no local build needed)
+dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
 
 # From a local checkout
 git clone https://github.com/MaRi23333/dsh-fish-tts.git
 cd dsh-fish-tts
 pnpm install && pnpm run build
-npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
+dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ```
 
 > The repo commits `lib/` build artifacts, so git installs need no local build; after
 > changing sources run `pnpm run build` and restart.
 
-> **Switching from the GitHub install to npm:** a bare `add dsh-fish-tts` is a silent
-> no-op when the git version is already installed (pnpm considers the same-name
-> dependency satisfied). Use `npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts@latest`
-> instead, or `remove` first and then `add`.
+> **Note**: If using `npx`, pin it to the exact version matching your Web host (e.g. `npx @deepseek-ai/dsh@<version>`). When switching from the GitHub install to npm, a bare `add dsh-fish-tts` is a silent no-op when the git version is already installed (pnpm considers the same-name dependency satisfied). Use `dsh plugin --profile web add dsh-fish-tts@latest` instead, or `remove` first and then `add`.
 
 > When installing a freshly published npm version, pnpm's supply-chain protection may
 > automatically add `minimumReleaseAgeExclude: [dsh-fish-tts@…]` to the profile's

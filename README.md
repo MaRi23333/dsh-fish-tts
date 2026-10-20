@@ -74,10 +74,41 @@
 
 ## 安装
 
-一条命令，从 npm 安装（推荐）：
+桌面客户端与 Web 实例的插件安装及启用状态完全独立。请根据你使用的运行环境选择对应方式：
+
+### 桌面客户端安装（推荐）
+
+通过桌面客户端界面安装（无需配置命令行）：
+
+1. 打开桌面客户端左侧栏**「插件 / Plugins」**，点击右上角**「添加插件 / Add plugin」**；
+2. 输入 npm 包名 `dsh-fish-tts@latest` 并确认安装；
+3. 安装完成后点击**「立即启用 / Enable now」**（若直接关闭安装完成弹窗，插件会保留在已安装列表中但处于未启用状态）；
+4. 仅在界面提示需要重启时，通过菜单完整退出应用（**Quit**）后重新打开（在 Windows / macOS 上直接关闭窗口可能仅隐藏到后台）；
+5. 识别点：打开 **Settings**，确认侧栏设置项中出现**「语音朗读 / Voice (Fish TTS)」**。
+
+<details>
+<summary>备选：桌面端终端安装（Windows / macOS）</summary>
+
+若偏好终端管理，可使用桌面配套 CLI：
+
+1. 在桌面客户端应用菜单中选择 **Manage dsh Command…** → **Install**（注册桌面配套命令，若提示 PATH 冲突按其指引处理），并打开新终端；
+2. 确保桌面客户端已至少启动过一次以完成初始化，并先通过 **Quit** 完整退出桌面客户端；
+3. 在新终端中执行桌面专用命令安装与检查：
+   ```sh
+   dsh plugin --profile desktop add dsh-fish-tts@latest
+   dsh plugin --profile desktop list
+   ```
+4. 重新启动桌面客户端。
+
+> 注意：通过外部 npm / npx 安装的普通 `dsh` CLI 无法管理 desktop profile。关于桌面配套命令机制，详见官方桌面端文档的 [bundled-command-runtime](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.1-rc.2/apps/desktop/README.md#bundled-command-runtime)。
+</details>
+
+### Web 实例安装
+
+Web 实例通过匹配的命令行工具进行管理。优先使用启动该 Web 实例的同一套匹配宿主的 `dsh` CLI：
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts
+dsh plugin --profile web add dsh-fish-tts@latest
 ```
 
 然后**重启 dsh web**（关掉终端重新运行 `dsh web`）并刷新页面，打开 **Settings → 语音朗读**。
@@ -85,19 +116,19 @@ npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts
 其他安装方式：
 
 ```sh
-# 从 GitHub 安装（git-hosted 插件会在安装时构建）
-npx @deepseek-ai/dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
+# 从 GitHub 安装（仓库已附 lib 产物，无需本地构建）
+dsh plugin --profile web add github:MaRi23333/dsh-fish-tts
 
 # 从本地目录安装
 git clone https://github.com/MaRi23333/dsh-fish-tts.git
 cd dsh-fish-tts
 pnpm install && pnpm run build
-npx @deepseek-ai/dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
+dsh plugin --profile web add /absolute/path/to/dsh-fish-tts
 ```
 
 > 仓库已提交 `lib/` 构建产物，git 安装无需本地构建；改源码后运行 `pnpm run build` 再重启即可。
 
-> **从 GitHub 版换到 npm 源**：裸包名 `add dsh-fish-tts` 对已装的 git 版是静默空操作（pnpm 判定同名依赖已满足）。请改用 `npx @deepseek-ai/dsh plugin --profile web add dsh-fish-tts@latest`，或先 `remove` 再 `add`。
+> **说明**：若使用 `npx` 执行安装命令，请固定为与你的 Web 宿主相同的版本（例如 `npx @deepseek-ai/dsh@<version>`）。从 GitHub 版换到 npm 源时，裸包名 `add dsh-fish-tts` 对已装的 git 版是静默空操作（pnpm 判定同名依赖已满足），请改用带 `@latest` 的命令明确请求 npm 上的最新版本，或先 `remove` 再 `add`。
 
 > 安装刚发布的 npm 版本时，pnpm 的供应链保护可能自动在 profile 的 `pnpm-workspace.yaml` 写入 `minimumReleaseAgeExclude: [dsh-fish-tts@…]`，属正常行为，不影响使用。
 

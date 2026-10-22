@@ -69,6 +69,29 @@ function errorWithStatus(status: number): Error {
   return error
 }
 
+test('delivery registration rejects invalid hooks before any synthesis', () => {
+  const registry = new DeliveryRegistry()
+  for (const invalid of [null, undefined, {}, { deliver: true }, { deliver: async () => {}, claims: true }]) {
+    assert.throws(() => registry.register('test', invalid as unknown as SpeakDelivery), /invalid speech delivery registration/)
+  }
+  assert.throws(() => registry.register('', { deliver: async () => {} }), /invalid speech delivery registration/)
+  assert.equal(registry.size, 0)
+})
+
+test('success logs omit session and channel identifiers', async () => {
+  const logs: string[] = []
+  const h = makeHarness({ log: (message) => logs.push(message) })
+  h.deliveries.register('private-channel', { deliver: async () => {} })
+  try {
+    await h.tool.execute({ text: 'Hello' }, { agent: { session: { id: 'private-session' } } })
+    assert.equal(logs.length, 1)
+    assert.match(logs[0]!, /delivered=true/)
+    assert.doesNotMatch(logs.join('\n'), /private-session|private-channel|session=|channel=/)
+  } finally {
+    rmSync(h.outDir, { recursive: true, force: true })
+  }
+})
+
 test('happy path with a claiming channel: delivered, no absolute path in result, slot kept', async () => {
   const h = makeHarness()
   const sent: Array<{ audioPath: string; text: string; sessionId: string }> = []

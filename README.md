@@ -43,7 +43,7 @@
   - 音色 `reference_id`（可直接输入、修改或清空，无须收藏；合成需要有效 ID，插件不提供默认音色）
   - API Key（**AES-256-GCM 加密存储**在本机 `$DSH_HOME/fish-tts/settings.json`，密钥文件 `key.bin` 自动生成并在 Windows 上收紧 ACL；Key 不会出现在任何 GET 响应、日志或仓库中）
   - HTTP 代理（例如 `http://127.0.0.1:7890`，直连不通时可填）
-  - 音频生成（智能体调用）：开关、格式（mp3/wav/opus）、单条文本上限、每分钟上限（0 为禁止发送）、服务端响度归一化开关、音量微调（-20~+20 dB）——**折叠分组，置于设置页末尾**，不需要该功能的用户可以完全无视
+  - 音频生成（智能体调用）：开关、格式（mp3/wav/opus）、单条文本上限、每分钟上限（0 为禁止发送）、服务端响度归一化开关、音量微调（-20~+20 dB）——**折叠分组，置于设置页末尾**。工具默认启用，调用可能消耗 Fish Audio 额度，不需要时可在此关闭
   - 试听／停止试听按钮、自动朗读开关、音量滑条（默认 60%，仅影响 DSH 内的朗读播放，不影响生成的音频文件）、倍速滑条（0.5–2.0×，不变调；环境不支持时固定 1×）
 - **双语界面**（中文 / English，跟随 DSH 语言设置；en 词条与 zh 完全对齐）。
 
@@ -192,7 +192,7 @@ ctx.effect(() => fishTts.registerDelivery('im', {
 }), 'im: fish-tts delivery')
 ```
 
-工具契约要点：输入 `{ text, voice?, format? }`（`voice` 支持收藏名或原始 reference_id）；输出只含长度、格式、MIME 与投递状态，**不含绝对路径与台词内容**；错误按 `rate-limited` / `text-too-long` / `auth` / `quota` / `network` / `voice-rejected` 等代码前缀返回，模型可据此改用文字回复。每会话每分钟上限（默认 1，0 为停用）在合成前占槽、失败释放；未投递时音频保留在 `$DSH_HOME/fish-tts/out/`（24 小时后顺手清理）。响度归一化由 Fish Audio 服务端完成（`prosody.normalize_loudness`，s1 系模型不支持），另附 -20~+20 dB 音量微调。
+工具默认启用；调用会使用已配置的 Fish Audio Key，可能消耗额度，可在设置页关闭。输入 `{ text, voice?, format? }`（`voice` 支持收藏名或原始 reference_id）；输出含长度、格式、MIME 与投递状态，未投递时另含文件名，**不含绝对路径与台词内容**；错误按 `rate-limited` / `text-too-long` / `auth` / `quota` / `network` / `voice-rejected` 等代码前缀返回，模型可据此改用文字回复。每会话每分钟上限（默认 1，0 为停用）在合成前占槽、失败释放。投递成功或明确拒绝后删除文件；未投递或投递超时的音频保留在 `$DSH_HOME/fish-tts/out/`，启动或后续调用时清理超过 24 小时的文件，并非到点定时删除。响度归一化由 Fish Audio 服务端完成（`prosody.normalize_loudness`，s1 系模型不支持），另附 -20~+20 dB 音量微调。
 
 ## 安全
 

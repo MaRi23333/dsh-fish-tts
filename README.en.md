@@ -238,13 +238,17 @@ ctx.effect(() => fishTts.registerDelivery('im', {
 }), 'im: fish-tts delivery')
 ```
 
-Contract highlights: input `{ text, voice?, format? }` (`voice` accepts a saved-voice
-name or a raw reference_id); output carries sizes, format, MIME and delivery status
-only — **no absolute paths, no spoken content**. Errors surface with code prefixes
+The tool is enabled by default. Calls use the configured Fish Audio key and may
+consume quota; turn it off in Settings if not needed. Input is `{ text, voice?, format? }`
+(`voice` accepts a saved-voice name or a raw reference_id); output carries sizes,
+format, MIME and delivery status, plus a filename when undelivered — **no absolute
+paths, no spoken content**. Errors surface with code prefixes
 (`rate-limited` / `text-too-long` / `auth` / `quota` / `network` / `voice-rejected`, …)
 so the model can fall back to a text reply. The per-conversation per-minute limit
 (default 1; 0 disables) claims the slot before synthesis and releases it on failure.
-Undelivered audio stays in `$DSH_HOME/fish-tts/out/` and is swept after 24 hours.
+Files are removed after successful delivery or explicit rejection. Undelivered audio
+and files from timed-out deliveries stay in `$DSH_HOME/fish-tts/out/`; files older than
+24 hours are cleaned up at startup or on later calls, not by a scheduled deletion.
 Loudness normalization runs server-side at Fish Audio (`prosody.normalize_loudness`;
 unsupported on s1 models), with a -20..+20 dB volume trim on top.
 

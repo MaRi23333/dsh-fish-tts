@@ -292,6 +292,12 @@ export class DeliveryRegistry {
 
   /** Register (or replace) a channel's hook; returns the exact disposer. */
   register(channel: string, delivery: SpeakDelivery): () => void {
+    if (typeof channel !== 'string' || channel.trim() === ''
+      || delivery === null || typeof delivery !== 'object'
+      || typeof delivery.deliver !== 'function'
+      || (delivery.claims !== undefined && typeof delivery.claims !== 'function')) {
+      throw new TypeError('invalid speech delivery registration')
+    }
     this.entries.set(channel, delivery)
     return () => {
       if (this.entries.get(channel) === delivery) this.entries.delete(channel)
@@ -643,7 +649,7 @@ export function createSpeakTool(deps: SpeakToolDeps): Record<string, unknown> {
       }
 
       cleanupSpeakFiles(outDir, SPEAK_FILE_TTL_MS, now())
-      deps.log(`${SPEAK_TOOL_NAME} ${audio.length}B ${text.length}ch ${format} delivered=${claimed !== undefined}${claimed !== undefined ? ` channel=${claimed.channel}` : ''} session=${sessionKey}`)
+      deps.log(`${SPEAK_TOOL_NAME} ${audio.length}B ${text.length}ch ${format} delivered=${claimed !== undefined}`)
 
       return {
         bytes: audio.length,

@@ -1,6 +1,11 @@
 # 更新记录 / Changelog
 
-## 0.3.0（2026-10-19）
+## 0.3.0（2026-10-22）
+
+- 将网络请求依赖 Undici 升级到 `7.30.1`，包含上游 2026 年 10 月的安全修复，声明下限同步为 `^7.30.1`。
+- Updated the HTTP dependency Undici to `7.30.1`, including upstream security fixes from October 2026, and raised the declared minimum to `^7.30.1`.
+- 补充工具默认启用与额度提示；无效通道注册立即拒绝，成功日志不再记录会话或通道标识。
+- Clarified default enablement and quota usage; invalid channel registrations are rejected immediately, and success logs no longer include session or channel identifiers.
 
 - 新增智能体可调用的音频生成工具 `fish_tts_speak`：把台词生成为音频文件；所在会话接了聊天通道时，文件交由通道插件投递为语音条。台词清洗、每会话限频、响度与文件生命周期都在本插件，通道只注册投递器并保留自己的出站过滤。
 - Added the agent-callable audio-generation tool `fish_tts_speak`: spoken lines become audio files; when the session has a chat channel attached, the file is handed to the channel plugin for delivery as a voice bubble. Line cleaning, per-conversation rate limiting, loudness and the file lifecycle live in this plugin; channels only register a delivery hook and keep their own outbound filtering.

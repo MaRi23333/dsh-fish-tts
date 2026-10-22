@@ -267,9 +267,13 @@ unsupported on s1 models), with a -20..+20 dB volume trim on top.
   no personal data.
 - Synthesis text is capped at 12000 characters; results are cached in-process
   (max 200 entries), cleared on restart.
-- Audio-generation results carry sizes, format and delivery status only — no absolute paths,
-  spoken lines or identity data; generated audio stays in `$DSH_HOME/fish-tts/out/` on
-  this machine, and logs record byte/char counts only.
+- Audio-generation results do not echo absolute local paths, spoken lines, or account
+  information. Local files live in `$DSH_HOME/fish-tts/out/`; logs record sizes, format,
+  and delivery status without session identifiers. Compatible channels can send the
+  generated file to the conversation's recipient.
+- Cancellation during delivery is handled by the channel; audio already sent cannot
+  be recalled. A delivery timeout does not prove the send failed. Check the channel
+  before retrying to avoid duplicate messages.
 
 ## Develop
 

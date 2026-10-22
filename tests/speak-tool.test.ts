@@ -6,9 +6,11 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { ModuleKind, ScriptTarget, transpileModule } from 'typescript'
 import { createSpeakTool, DeliveryRegistry, RateLimiter, DEFAULT_SPEAK_SETTINGS, SPEAK_TOOL_NAME } from '../src/speak.ts'
 import type { SpeakDelivery, SpeakSettings, SpeakSynthesisRequest, SpeakToolDeps } from '../src/speak.ts'
 
@@ -203,6 +205,72 @@ test('a hung delivery hits the ceiling: voice-rejected, file kept for the TTL, s
   const result = await h.tool.execute({ text: '换个说法' })
   assert.equal(result.delivered, true)
   rmSync(h.outDir, { recursive: true, force: true })
+})
+
+function runDeliveryProcess(mode: 'hang' | 'resolve' | 'reject' | 'throw'): void {
+  // Plain Node has no test runner or TS loader worker keeping a hung promise
+  // alive. Feed the transpiled source over stdin without creating build files.
+  const source = transpileModule(readFileSync(new URL('../src/speak.ts', import.meta.url), 'utf8'), {
+    compilerOptions: { module: ModuleKind.ESNext, target: ScriptTarget.ES2022 },
+  }).outputText
+  const child = spawnSync(process.execPath, ['--input-type=module'], {
+    encoding: 'utf8',
+    timeout: 5_000,
+    env: { ...process.env, NODE_OPTIONS: '' },
+    input: `${source}
+      import assert from 'node:assert/strict'
+      import { mkdtempSync } from 'node:fs'
+      import { tmpdir } from 'node:os'
+      const mode = ${JSON.stringify(mode)}
+      const outDir = mkdtempSync(join(tmpdir(), 'fish-tts-delivery-process-'))
+      const deliveries = new DeliveryRegistry()
+      deliveries.register('test', {
+        deliver: mode === 'hang' ? () => new Promise(() => {})
+          : mode === 'throw' ? () => { throw new Error('channel rejected') }
+          : async () => { if (mode === 'reject') throw new Error('channel rejected') },
+      })
+      const limiter = new RateLimiter()
+      const tool = createSpeakTool({
+        settings: () => DEFAULT_SPEAK_SETTINGS,
+        defaultVoice: () => 'test-voice',
+        savedVoices: () => [],
+        hasApiKey: () => true,
+        model: () => 'test-model',
+        synthesize: async () => Buffer.from('test-audio'),
+        deliveries, limiter, outDir: () => outDir, log: () => {},
+        ...(mode === 'hang' ? { deliverTimeoutMs: 30 } : {}),
+      })
+      async function run() {
+        try {
+          if (mode === 'resolve') {
+            assert.equal((await tool.execute({ text: 'Hello' })).delivered, true)
+          } else {
+            await assert.rejects(() => tool.execute({ text: 'Hello' }),
+              mode === 'hang' ? /voice-rejected.*delivery timed out/s : /voice-rejected.*channel rejected/s)
+          }
+          assert.equal(readdirSync(outDir).length, mode === 'hang' ? 1 : 0)
+          assert.equal(limiter.tryAcquire('default', 60_000).ok, mode !== 'resolve')
+        } finally {
+          rmSync(outDir, { recursive: true, force: true })
+        }
+      }
+      run().then(() => process.stdout.write('settled\\n'), error => {
+        console.error(error)
+        process.exitCode = 1
+      })
+    `,
+  })
+  assert.ifError(child.error)
+  assert.equal(child.status, 0, child.stderr)
+  assert.equal(child.stdout, 'settled\n', `delivery did not settle: ${child.stderr}`)
+}
+
+test('a hung delivery reaches its deadline with no other active handles', () => {
+  runDeliveryProcess('hang')
+})
+
+test('settled deliveries exit without waiting for the default 20-second deadline', () => {
+  for (const mode of ['resolve', 'reject', 'throw'] as const) runDeliveryProcess(mode)
 })
 
 test('absurdly large audio is rejected before touching the disk', async () => {

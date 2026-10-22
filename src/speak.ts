@@ -619,6 +619,7 @@ export function createSpeakTool(deps: SpeakToolDeps): Record<string, unknown> {
 
       const claimed = deps.deliveries.find(sessionKey, agent)
       if (claimed !== undefined) {
+        let deliveryTimer: ReturnType<typeof setTimeout> | undefined
         try {
           // Hard ceiling: a channel that never settles must not pin the
           // exclusive tool pipeline (the harness does not enforce timeoutMs).
@@ -626,9 +627,8 @@ export function createSpeakTool(deps: SpeakToolDeps): Record<string, unknown> {
           await Promise.race([
             claimed.delivery.deliver({ audioPath, mime, text, sessionId: sessionKey, agent, signal: exec.signal }),
             new Promise<never>((_, reject) => {
-              const timer = setTimeout(() => reject(new DeliveryTimeoutError(deliverCeiling)), deliverCeiling)
-              // Do not hold the event loop open for the rejection timer alone.
-              timer.unref?.()
+              // Keep the deadline active even when the channel has no live handles.
+              deliveryTimer = setTimeout(() => reject(new DeliveryTimeoutError(deliverCeiling)), deliverCeiling)
             }),
           ])
           // Delivered: the channel has consumed the file — free it now
@@ -645,6 +645,9 @@ export function createSpeakTool(deps: SpeakToolDeps): Record<string, unknown> {
           deps.limiter.release(sessionKey, slot.token)
           const detail = sanitizeErrorDetail(error instanceof Error ? error.message : String(error))
           throw speakError('voice-rejected', `the channel rejected the voice — ${detail}`)
+        } finally {
+          // A settled delivery must not keep the process alive until the ceiling.
+          if (deliveryTimer !== undefined) clearTimeout(deliveryTimer)
         }
       }
 

@@ -1,5 +1,12 @@
 # 更新记录 / Changelog
 
+## 0.3.1（2026-10-22）
+
+- 修复语音通道投递的超时计时器：等待期间保持计时器有效，投递结束后及时清理，避免 Node.js 22 下超时尚未触发便退出。
+- Fixed the voice-delivery timeout timer: keep it active while waiting and clear it when delivery settles, preventing early exit before the timeout under Node.js 22.
+- 音频生成功能及 Undici `7.30.1` 安全更新见下方 0.3.0 说明；现有配置不变。
+- See 0.3.0 below for audio generation and the Undici `7.30.1` security update. Existing settings are unchanged.
+
 ## 0.3.0（2026-10-22）
 
 - 将网络请求依赖 Undici 升级到 `7.30.1`，包含上游 2026 年 10 月的安全修复，声明下限同步为 `^7.30.1`。

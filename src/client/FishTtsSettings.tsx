@@ -10,6 +10,7 @@ import type { SpeakSettings } from '../speak.ts'
 import type { FishTtsKey } from './locales.ts'
 import type { TtsConfig } from './tts.ts'
 import { SpeakerIcon } from './icons.tsx'
+import { settingsCss } from './settingsStyles.ts'
 
 export interface FishTtsSettingsInjected {
   t: (key: FishTtsKey) => string
@@ -54,30 +55,31 @@ const monoFont = 'Consolas, Menlo, Monaco, monospace'
 
 const colors = {
   text: 'var(--dsw-alias-label-primary, inherit)',
-  secondary: 'rgba(128, 128, 128, 0.85)',
-  border: 'rgba(128, 128, 128, 0.35)',
-  borderInput: 'rgba(128, 128, 128, 0.4)',
-  divider: 'rgba(128, 128, 128, 0.2)',
+  secondary: 'var(--dsw-alias-label-secondary, #64748b)',
+  border: 'var(--dsw-alias-border-l3, rgba(128, 128, 128, 0.24))',
+  borderInput: 'var(--dsw-alias-border-l3, rgba(128, 128, 128, 0.32))',
+  divider: 'var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.16))',
   error: 'var(--dsw-alias-state-error-primary, #dc2626)',
   success: 'var(--dsw-alias-state-success-primary, #16a34a)',
   primary: 'rgba(37, 99, 235, 0.95)',
 }
 const cardStyle: CSSProperties = {
   minWidth: 0,
-  padding: '12px',
+  padding: '16px',
   border: `1px solid ${colors.border}`,
   borderRadius: '8px',
   background: 'transparent',
   display: 'flex',
   flexDirection: 'column',
-  gap: '8px',
+  gap: '14px',
 }
+const sectionStyle: CSSProperties = { minWidth: 0, padding: '16px 0', borderBottom: `1px solid ${colors.divider}`, display: 'flex', flexDirection: 'column', gap: '14px' }
 const stackStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }
 const actionsStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', minWidth: 0 }
-const hintStyle: CSSProperties = { margin: 0, fontSize: '14px', lineHeight: 1.5, opacity: 0.75, overflowWrap: 'anywhere' }
+const hintStyle: CSSProperties = { margin: 0, fontSize: '14px', lineHeight: 1.6, color: colors.secondary, overflowWrap: 'anywhere' }
 const errorStyle: CSSProperties = { margin: 0, fontSize: '12px', lineHeight: 1.5, color: colors.error, overflowWrap: 'anywhere' }
-const headingStyle: CSSProperties = { margin: 0, fontSize: '15px', lineHeight: 1.5, fontWeight: 600 }
-const fieldStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }
+const headingStyle: CSSProperties = { margin: 0, fontSize: '16px', lineHeight: 1.5, fontWeight: 600 }
+const fieldStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }
 const inputStyle: CSSProperties = {
   boxSizing: 'border-box',
   width: '100%',
@@ -85,16 +87,20 @@ const inputStyle: CSSProperties = {
   fontFamily: 'inherit',
   fontSize: '14px',
   lineHeight: 1.5,
-  padding: '5px 10px',
+  padding: '7px 10px',
   border: `1px solid ${colors.borderInput}`,
   borderRadius: '6px',
-  background: 'transparent',
+  background: 'var(--dsw-alias-bg-base, transparent)',
   color: 'inherit',
 }
 const monoInputStyle: CSSProperties = {
   ...inputStyle,
   fontFamily: monoFont,
 }
+const rangeStyle = (value: number, min: number, max: number): CSSProperties => ({
+  accentColor: colors.primary,
+  '--fish-range-progress': `${Math.max(0, Math.min(100, (value - min) / (max - min) * 100))}%`,
+} as CSSProperties)
 const buttonStyle = (disabled: boolean, variant: ButtonVariant | boolean = 'default'): CSSProperties => {
   const isPrimary = variant === true || variant === 'primary'
   const isDanger = variant === 'danger'
@@ -102,19 +108,19 @@ const buttonStyle = (disabled: boolean, variant: ButtonVariant | boolean = 'defa
     boxSizing: 'border-box',
     maxWidth: '100%',
     minWidth: 0,
-    minHeight: '32px',
+    minHeight: '36px',
     padding: isPrimary ? '4px 14px' : '4px 12px',
     fontFamily: 'inherit',
     fontSize: '14px',
     lineHeight: 1.5,
-    border: isPrimary
+    border: isPrimary && !disabled
       ? '1px solid transparent'
       : isDanger
         ? '1px solid rgba(220, 38, 38, 0.55)'
         : `1px solid ${colors.borderInput}`,
     borderRadius: '6px',
-    background: isPrimary ? colors.primary : 'transparent',
-    color: isPrimary ? '#fff' : isDanger ? colors.error : 'inherit',
+    background: isPrimary && !disabled ? colors.primary : 'transparent',
+    color: isPrimary && !disabled ? '#fff' : isDanger ? colors.error : 'inherit',
     cursor: disabled ? 'default' : 'pointer',
     opacity: disabled ? 0.45 : 1,
     overflowWrap: 'anywhere',
@@ -123,13 +129,9 @@ const buttonStyle = (disabled: boolean, variant: ButtonVariant | boolean = 'defa
 
 const feedbackOkStyle: CSSProperties = {
   margin: 0,
-  fontSize: '13px',
-  lineHeight: 1.5,
-  padding: '6px 10px',
-  borderRadius: '6px',
-  background: 'rgba(22, 163, 74, 0.12)',
-  border: '1px solid rgba(22, 163, 74, 0.4)',
-  color: 'inherit',
+  fontSize: '14px',
+  lineHeight: 1.6,
+  color: colors.text,
   overflowWrap: 'anywhere',
 }
 const feedbackErrorStyle: CSSProperties = {
@@ -146,7 +148,7 @@ const feedbackErrorStyle: CSSProperties = {
 
 function FeedbackMessage({ feedback }: { feedback: Feedback }): React.ReactElement | null {
   if (feedback === null) return null
-  return <p role={feedback.error ? 'alert' : 'status'} aria-live="polite" style={feedback.error ? feedbackErrorStyle : feedbackOkStyle}>{feedback.message}</p>
+  return <p role={feedback.error ? 'alert' : 'status'} aria-live="polite" style={feedback.error ? feedbackErrorStyle : feedbackOkStyle}>{!feedback.error && <span aria-hidden="true" style={{ color: colors.success }}>✓ </span>}{feedback.message}</p>
 }
 
 export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement {
@@ -513,9 +515,10 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '860px', minWidth: 0, fontSize: '14px', lineHeight: 1.6, color: 'inherit' }}>
-      <header style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-        <h2 style={{ ...headingStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="fish-tts-settings" style={{ display: 'flex', flexDirection: 'column', maxWidth: '860px', minWidth: 0, fontSize: '14px', lineHeight: 1.6, color: colors.text }}>
+      <style>{settingsCss}</style>
+      <header style={{ display: 'flex', flexDirection: 'column', marginBottom: '18px', gap: '4px', minWidth: 0 }}>
+        <h2 style={{ ...headingStyle, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <SpeakerIcon playing={isTestPlaying} />
           <span>{t('settings.title')}</span>
         </h2>
@@ -529,44 +532,38 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
         </div>
       )}
       {savedConfig !== null && !keyConfigured && (
-        <div role="status" style={{ ...actionsStyle, padding: '10px 12px', borderRadius: '6px', border: '1px solid rgba(217, 119, 6, 0.45)', background: 'rgba(217, 119, 6, 0.12)' }}>
+        <div role="status" style={{ ...actionsStyle, marginBottom: '12px', padding: '10px 12px', borderRadius: '6px', border: '1px solid rgba(217, 119, 6, 0.45)', background: 'rgba(217, 119, 6, 0.12)' }}>
           <p style={{ ...hintStyle, flex: '1 1 240px', color: 'inherit' }}>{t('settings.connection.firstStep')}</p>
           <button type="button" onClick={() => openConnection(true)} style={buttonStyle(false, 'primary')}>{t('settings.connection.configure')}</button>
         </div>
       )}
 
-      <section aria-labelledby={`${ids}-voice-title`} style={{ ...cardStyle, ...stackStyle }}>
-        <h3 id={`${ids}-voice-title`} style={headingStyle}>{t('settings.voices.section')}</h3>
+      <section aria-labelledby={`${ids}-voice-title`} style={cardStyle}>
+        <div className="fish-tts-voice-heading">
+          <h3 id={`${ids}-voice-title`} style={headingStyle}>{t('settings.voices.section')}</h3>
+          {(activeVoice !== '' || canStopTest) && <button type="button" disabled={testDisabled} onClick={() => { void onTest() }} style={buttonStyle(testDisabled, keyConfigured || canStopTest)}>{t(canStopTest ? 'settings.test.stop' : 'settings.test')}</button>}
+        </div>
         <div style={fieldStyle}>
           <label htmlFor={`${ids}-manual-id`}>{t('settings.voice')}</label>
-          <div style={actionsStyle}>
-            <input id={`${ids}-manual-id`} value={manualVoiceDraft} maxLength={256} disabled={fieldsDisabled} onChange={event => { setManualVoiceDraft(event.target.value); setManualVoiceFeedback(null); setTestError(null) }} onKeyDown={event => { if (event.key === 'Enter' && manualVoiceDirty && !fieldsDisabled) void onApplyManualVoice() }} placeholder={t('settings.voice.placeholder')} style={{ ...monoInputStyle, flex: '1 1 240px', width: 'auto' }} />
-            <button type="button" disabled={fieldsDisabled || !manualVoiceDirty} onClick={() => { void onApplyManualVoice() }} style={buttonStyle(fieldsDisabled || !manualVoiceDirty, 'primary')}>{t(savingAction === 'manualVoice' ? 'settings.saving' : manualVoiceDraft.trim() === '' ? 'settings.voice.clear' : 'settings.voice.apply')}</button>
+          <div className="fish-tts-id-controls">
+            <input id={`${ids}-manual-id`} value={manualVoiceDraft} maxLength={256} disabled={fieldsDisabled} onChange={event => { setManualVoiceDraft(event.target.value); setManualVoiceFeedback(null); setTestError(null) }} onKeyDown={event => { if (event.key === 'Enter' && manualVoiceDirty && !fieldsDisabled) void onApplyManualVoice() }} placeholder={t('settings.voice.placeholder')} style={monoInputStyle} />
+            <button type="button" disabled={fieldsDisabled || !manualVoiceDirty} onClick={() => { void onApplyManualVoice() }} style={buttonStyle(fieldsDisabled || !manualVoiceDirty, 'primary')}>{t(savingAction === 'manualVoice' ? 'settings.saving' : manualVoiceDraft.trim() === '' && activeVoice !== '' ? 'settings.voice.clear' : 'settings.voice.apply')}</button>
           </div>
           <FeedbackMessage feedback={manualVoiceFeedback} />
         </div>
-        {currentVoice !== undefined && currentVoice.name.trim() !== '' && (
-          <div style={{ ...stackStyle, gap: '6px' }}>
-            <p style={{ margin: 0, fontSize: '16px', fontWeight: 500, overflowWrap: 'anywhere' }}>{t('settings.voices.current')}{currentVoice.name}</p>
-            {currentVoice.note && <p style={{ margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{currentVoice.note}</p>}
-            <button type="button" disabled={fieldsDisabled} onClick={() => openEditVoice(currentVoice)} style={{ ...buttonStyle(fieldsDisabled), alignSelf: 'flex-start' }}>{t('settings.voices.editCurrent')}</button>
-          </div>
-        )}
         {savedVoices.length > 0 && (
           <div style={fieldStyle}>
-            <label htmlFor={`${ids}-switch`}>{t('settings.voices')}</label>
+            <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
+              <label htmlFor={`${ids}-switch`}>{t('settings.voices')}</label>
+              {currentVoice !== undefined && <button type="button" className="fish-tts-quiet-button" disabled={fieldsDisabled} onClick={() => openEditVoice(currentVoice)} style={buttonStyle(fieldsDisabled)}>{t('settings.voices.editCurrent')}</button>}
+            </div>
             <select id={`${ids}-switch`} value={currentVoice?.id ?? ''} disabled={fieldsDisabled} onChange={event => { void onSelectVoice(event.target.value) }} style={inputStyle}>
               <option value="" disabled>{t('settings.voices.choose')}</option>
               {savedVoices.map(entry => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
             </select>
+            {currentVoice?.note && <p style={{ ...hintStyle, whiteSpace: 'pre-wrap' }}>{currentVoice.note}</p>}
           </div>
         )}
-        <div style={actionsStyle}>
-          {(activeVoice !== '' || canStopTest) && <button type="button" disabled={testDisabled} onClick={() => { void onTest() }} style={buttonStyle(testDisabled, keyConfigured || canStopTest)}>{t(canStopTest ? 'settings.test.stop' : 'settings.test')}</button>}
-          <button type="button" disabled={fieldsDisabled} onClick={() => openAddVoice(currentVoice === undefined ? activeVoice : '')} style={buttonStyle(fieldsDisabled)}>
-            {t(activeVoice !== '' && currentVoice === undefined ? 'settings.voices.nameCurrent' : 'settings.voices.add')}
-          </button>
-        </div>
         {manualVoiceDirty && <p role="status" style={{ margin: 0, overflowWrap: 'anywhere' }}>{t('settings.voice.unapplied')}</p>}
         {testing && !isTestPlaying && <p role="status" aria-live="polite" style={hintStyle}>{t('settings.test.playing')}</p>}
         {connectionDirty && activeVoice !== '' && (
@@ -588,8 +585,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
             </div>
             <div style={fieldStyle}>
               <label htmlFor={`${ids}-id`}>{t('settings.voice.required')}</label>
-              <input id={`${ids}-id`} value={voiceEditor.id} required aria-required="true" aria-invalid={!!voiceErrors.id || duplicateVoice !== undefined} aria-describedby={`${ids}-id-hint${voiceErrors.id || duplicateVoice ? ` ${ids}-id-error` : ''}`} readOnly={voiceEditor.mode === 'edit'} maxLength={256} disabled={fieldsDisabled} onChange={event => updateVoiceEditor('id', event.target.value)} placeholder={t('settings.voice.placeholder')} style={monoInputStyle} />
-              <p id={`${ids}-id-hint`} style={hintStyle}>{t(voiceEditor.mode === 'edit' ? 'settings.voices.idReadOnly' : 'settings.voice.hint')}</p>
+              <input id={`${ids}-id`} value={voiceEditor.id} required aria-required="true" aria-invalid={!!voiceErrors.id || duplicateVoice !== undefined} aria-describedby={voiceErrors.id || duplicateVoice ? `${ids}-id-error` : undefined} readOnly={voiceEditor.mode === 'edit'} maxLength={256} disabled={fieldsDisabled} onChange={event => updateVoiceEditor('id', event.target.value)} placeholder={t('settings.voice.placeholder')} title={t(voiceEditor.mode === 'edit' ? 'settings.voices.idReadOnly' : 'settings.voice.hint')} style={monoInputStyle} />
               {(voiceErrors.id || duplicateVoice) && <p id={`${ids}-id-error`} role="alert" style={errorStyle}>{voiceErrors.id ?? t('settings.voices.duplicate')}</p>}
             </div>
             <div style={fieldStyle}>
@@ -605,46 +601,50 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
           </form>
         )}
 
-        <details style={{ borderTop: `1px solid ${colors.divider}`, paddingTop: '10px', minWidth: 0 }}>
-          <summary style={{ cursor: 'pointer', fontWeight: 500 }}>{t('settings.voices.manage')}{savedVoices.length > 0 ? ` (${savedVoices.length})` : ''}</summary>
-          <div style={{ ...stackStyle, marginTop: '10px' }}>
-            {savedVoices.length === 0 && <p style={hintStyle}>{t('settings.voices.listEmpty')}</p>}
-            {savedVoices.map(entry => (
-              <div key={entry.id} style={{ ...stackStyle, gap: '8px', padding: '10px 0', borderBottom: `1px solid ${colors.divider}` }}>
-                <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
-                  <div style={{ minWidth: 0, flex: '1 1 200px' }}>
-                    <p style={{ margin: 0, fontWeight: 500, overflowWrap: 'anywhere' }}>{entry.name}{entry.id === activeVoice && <span style={{ ...hintStyle, marginLeft: '8px' }}>{t('settings.voices.inUse')}</span>}</p>
-                    {entry.note && <p title={entry.note} style={{ margin: 0, whiteSpace: 'pre-line', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{entry.note}</p>}
-                  </div>
-                  <div style={actionsStyle}>
-                    <button type="button" disabled={fieldsDisabled || (entry.id === activeVoice && !manualVoiceDirty)} aria-label={`${t('settings.voices.use')} ${entry.name}`} onClick={() => { void onSelectVoice(entry.id) }} style={buttonStyle(fieldsDisabled || (entry.id === activeVoice && !manualVoiceDirty))}>{t('settings.voices.use')}</button>
-                    <button type="button" disabled={fieldsDisabled} aria-label={`${t('settings.voices.edit')} ${entry.name}`} onClick={() => openEditVoice(entry)} style={buttonStyle(fieldsDisabled)}>{t('settings.voices.edit')}</button>
-                    <button type="button" disabled={fieldsDisabled} aria-label={`${t('settings.voices.remove')} ${entry.name}`} onClick={() => requestRemoval(entry)} style={buttonStyle(fieldsDisabled)}>{t('settings.voices.remove')}</button>
-                  </div>
-                </div>
-                {pendingRemoval === entry.id && (
-                  <div style={{ ...stackStyle, gap: '6px', padding: '10px 12px', borderRadius: '6px', border: '1px solid rgba(220, 38, 38, 0.45)', background: 'rgba(220, 38, 38, 0.06)' }}>
-                    <p style={{ margin: 0, overflowWrap: 'anywhere' }}>{t('settings.voices.confirmRemove')} “{entry.name}”?</p>
-                    <p style={hintStyle}>{t('settings.voices.removeHint')}</p>
+        <div className="fish-tts-voice-tools" style={{ ...actionsStyle, ...(savedVoices.length > 0 ? { borderTop: `1px solid ${colors.divider}`, paddingTop: '10px' } : {}) }}>
+          <button type="button" className="fish-tts-quiet-button" disabled={fieldsDisabled} onClick={() => openAddVoice(currentVoice === undefined ? activeVoice : '')} style={buttonStyle(fieldsDisabled)}>
+            {t(activeVoice !== '' && currentVoice === undefined ? 'settings.voices.nameCurrent' : 'settings.voices.add')}
+          </button>
+          {savedVoices.length > 0 && <details style={{ flex: '1 1 180px', minWidth: 0 }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 500, justifyContent: 'flex-end' }}>{t('settings.voices.manage')}{savedVoices.length > 0 ? ` (${savedVoices.length})` : ''}</summary>
+            <div style={{ ...stackStyle, marginTop: '10px' }}>
+              {savedVoices.map(entry => (
+                <div key={entry.id} style={{ ...stackStyle, gap: '8px', padding: '10px 0', borderBottom: `1px solid ${colors.divider}` }}>
+                  <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
+                    <div style={{ minWidth: 0, flex: '1 1 200px' }}>
+                      <p style={{ margin: 0, fontWeight: 500, overflowWrap: 'anywhere' }}>{entry.name}{entry.id === activeVoice && <span style={{ ...hintStyle, marginLeft: '8px' }}>{t('settings.voices.inUse')}</span>}</p>
+                      {entry.note && <p title={entry.note} style={{ margin: 0, whiteSpace: 'pre-line', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{entry.note}</p>}
+                    </div>
                     <div style={actionsStyle}>
-                      <button type="button" disabled={fieldsDisabled} onClick={() => { void onRemoveVoice() }} style={buttonStyle(fieldsDisabled, 'danger')}>{t('settings.voices.confirm')}</button>
-                      <button type="button" disabled={savingAction === 'remove'} onClick={() => setPendingRemoval(null)} style={buttonStyle(savingAction === 'remove')}>{t('settings.cancel')}</button>
+                      <button type="button" disabled={fieldsDisabled || (entry.id === activeVoice && !manualVoiceDirty)} aria-label={`${t('settings.voices.use')} ${entry.name}`} onClick={() => { void onSelectVoice(entry.id) }} style={buttonStyle(fieldsDisabled || (entry.id === activeVoice && !manualVoiceDirty))}>{t('settings.voices.use')}</button>
+                      <button type="button" disabled={fieldsDisabled} aria-label={`${t('settings.voices.edit')} ${entry.name}`} onClick={() => openEditVoice(entry)} style={buttonStyle(fieldsDisabled)}>{t('settings.voices.edit')}</button>
+                      <button type="button" disabled={fieldsDisabled} aria-label={`${t('settings.voices.remove')} ${entry.name}`} onClick={() => requestRemoval(entry)} style={buttonStyle(fieldsDisabled)}>{t('settings.voices.remove')}</button>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
-            {activeVoice !== '' && currentVoice === undefined && <button type="button" disabled={fieldsDisabled} onClick={() => openAddVoice()} style={{ ...buttonStyle(fieldsDisabled), alignSelf: 'flex-start' }}>{t('settings.voices.addOther')}</button>}
-            <FeedbackMessage feedback={managementFeedback} />
-          </div>
-        </details>
+                  {pendingRemoval === entry.id && (
+                    <div style={{ ...stackStyle, gap: '6px', padding: '10px 12px', borderRadius: '6px', border: '1px solid rgba(220, 38, 38, 0.45)', background: 'rgba(220, 38, 38, 0.06)' }}>
+                      <p style={{ margin: 0, overflowWrap: 'anywhere' }}>{t('settings.voices.confirmRemove')} “{entry.name}”?</p>
+                      <p style={hintStyle}>{t('settings.voices.removeHint')}</p>
+                      <div style={actionsStyle}>
+                        <button type="button" disabled={fieldsDisabled} onClick={() => { void onRemoveVoice() }} style={buttonStyle(fieldsDisabled, 'danger')}>{t('settings.voices.confirm')}</button>
+                        <button type="button" disabled={savingAction === 'remove'} onClick={() => setPendingRemoval(null)} style={buttonStyle(savingAction === 'remove')}>{t('settings.cancel')}</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {activeVoice !== '' && currentVoice === undefined && <button type="button" disabled={fieldsDisabled} onClick={() => openAddVoice()} style={{ ...buttonStyle(fieldsDisabled), alignSelf: 'flex-start' }}>{t('settings.voices.addOther')}</button>}
+            </div>
+          </details>}
+        </div>
+        <FeedbackMessage feedback={managementFeedback} />
       </section>
 
-      <section aria-label={t('settings.connection.title')} style={{ ...cardStyle, ...stackStyle }}>
+      <section aria-label={t('settings.connection.title')} style={sectionStyle}>
         <details ref={connectionDetails} open={connectionOpen} onToggle={event => setConnectionOpen(event.currentTarget.open)}>
           <summary style={{ cursor: 'pointer', overflowWrap: 'anywhere' }}>
-            <span style={headingStyle}>{t('settings.connection.title')}</span>
-            <span style={{ ...hintStyle, marginLeft: '10px' }}>{connectionDirty ? t('settings.connection.unsaved') : savedConfig !== null ? t(keyConfigured ? 'settings.status.keyOk' : 'settings.status.keyMissing') : ''}</span>
+            <span className="fish-tts-summary-label" style={headingStyle}>{t('settings.connection.title')}</span>
+            <span className="fish-tts-summary-state">{connectionDirty ? t('settings.connection.unsaved') : savedConfig !== null ? t(keyConfigured ? 'settings.status.keyOk' : 'settings.status.keyMissing') : ''}</span>
           </summary>
           <div style={{ ...stackStyle, gap: '16px', marginTop: '16px' }}>
             <div style={fieldStyle}>
@@ -674,48 +674,48 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
             <div style={actionsStyle}>
               <button type="button" disabled={fieldsDisabled || !connectionDirty} onClick={() => { void onSaveConnection() }} style={buttonStyle(fieldsDisabled || !connectionDirty, 'primary')}>{t(savingAction === 'connection' ? 'settings.saving' : 'settings.connection.save')}</button>
             </div>
-            <p style={hintStyle}>{t('settings.sourceHint')}</p>
             <FeedbackMessage feedback={connectionFeedback} />
           </div>
         </details>
       </section>
 
-      <section aria-labelledby={`${ids}-preferences`} style={{ ...cardStyle, ...stackStyle }}>
-        <div style={{ ...stackStyle, gap: '4px' }}>
+      <section aria-labelledby={`${ids}-preferences`} style={sectionStyle}>
+        <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
           <h3 id={`${ids}-preferences`} style={headingStyle}>{t('settings.preferences.title')}</h3>
+          <span style={hintStyle}>{t('settings.preferences.noSave')}</span>
         </div>
         <div style={fieldStyle}>
-          <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
+          <div title={t('settings.autoplay.hint')} style={{ ...actionsStyle, justifyContent: 'space-between' }}>
             <label htmlFor={`${ids}-autoplay`}>{t('settings.autoplay')}</label>
-            <input id={`${ids}-autoplay`} type="checkbox" checked={enabled} onChange={() => { const next = !enabled; setEnabled(next); setAutoPlay(next) }} style={{ width: '18px', height: '18px', accentColor: colors.primary }} />
+            <input id={`${ids}-autoplay`} type="checkbox" checked={enabled} aria-describedby={`${ids}-autoplay-description`} onChange={() => { const next = !enabled; setEnabled(next); setAutoPlay(next) }} style={{ width: '18px', height: '18px', accentColor: colors.primary }} />
           </div>
-          <p style={hintStyle}>{t('settings.autoplay.hint')}</p>
+          <span id={`${ids}-autoplay-description`} hidden>{t('settings.autoplay.hint')}</span>
         </div>
         <div style={fieldStyle}>
           <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
             <label htmlFor={`${ids}-volume`}>{t('settings.volume')}</label>
-            <div style={{ ...actionsStyle, flex: '0 1 240px', flexWrap: 'nowrap' }}>
-              <input id={`${ids}-volume`} type="range" min={0} max={1} step={0.05} value={vol} onChange={event => { const next = Number(event.target.value); setVol(next); setVolume(next) }} style={{ minWidth: 0, width: '180px', maxWidth: '100%', accentColor: colors.primary }} />
-              <output htmlFor={`${ids}-volume`} style={{ flexShrink: 0, minWidth: '38px' }}>{Math.round(vol * 100)}%</output>
+            <div className="fish-tts-range-controls">
+              <input id={`${ids}-volume`} type="range" min={0} max={1} step={0.05} value={vol} aria-describedby={`${ids}-volume-description`} onChange={event => { const next = Number(event.target.value); setVol(next); setVolume(next) }} style={rangeStyle(vol, 0, 1)} />
+              <output htmlFor={`${ids}-volume`}>{Math.round(vol * 100)}%</output>
             </div>
           </div>
-          <p style={hintStyle}>{t('settings.volume.hint')}</p>
+          <p id={`${ids}-volume-description`} style={hintStyle}>{t('settings.volume.hint')}</p>
         </div>
         <div style={{ ...actionsStyle, justifyContent: 'space-between' }}>
           <label htmlFor={`${ids}-speed`}>{t('settings.speed')}</label>
-          <div style={{ ...actionsStyle, flex: '0 1 240px', flexWrap: 'nowrap' }}>
-            <input id={`${ids}-speed`} type="range" min={0.5} max={2} step={0.25} value={speedOk ? spd : 1} disabled={!speedOk} onChange={event => { const next = Number(event.target.value); setSpd(next); setSpeed(next) }} style={{ minWidth: 0, width: '180px', maxWidth: '100%', accentColor: colors.primary }} />
-            <output htmlFor={`${ids}-speed`} style={{ flexShrink: 0, minWidth: '38px' }}>{Number((speedOk ? spd : 1).toFixed(2))}×</output>
+          <div className="fish-tts-range-controls">
+            <input id={`${ids}-speed`} type="range" min={0.5} max={2} step={0.25} value={speedOk ? spd : 1} disabled={!speedOk} onChange={event => { const next = Number(event.target.value); setSpd(next); setSpeed(next) }} style={rangeStyle(speedOk ? spd : 1, 0.5, 2)} />
+            <output htmlFor={`${ids}-speed`}>{Number((speedOk ? spd : 1).toFixed(2))}×</output>
           </div>
         </div>
         {!speedOk && <p style={errorStyle}>{t('settings.speed.unsupported')}</p>}
       </section>
 
-      <section aria-labelledby={`${ids}-speak-title`} style={{ ...cardStyle, ...stackStyle }}>
+      <section aria-labelledby={`${ids}-speak-title`} style={{ ...sectionStyle, borderBottom: 0 }}>
         <details>
           <summary style={{ cursor: 'pointer', overflowWrap: 'anywhere' }}>
-            <span style={headingStyle}>{t('settings.speak.section')}</span>
-            <span style={{ ...hintStyle, marginLeft: '10px' }}>{speakDraft === null ? '' : speakDraft.enabled ? t('settings.speak.statusOn') : t('settings.speak.statusOff')}</span>
+            <span id={`${ids}-speak-title`} className="fish-tts-summary-label" style={headingStyle}>{t('settings.speak.section')}</span>
+            <span className="fish-tts-summary-state">{speakDraft === null ? '' : speakDraft.enabled ? t('settings.speak.statusOn') : t('settings.speak.statusOff')}</span>
           </summary>
           <div style={{ ...stackStyle, gap: '12px', marginTop: '14px' }}>
             <p style={hintStyle}>{t('settings.speak.hint')}</p>
@@ -753,7 +753,7 @@ export function FishTtsSettings(props: FishTtsSettingsProps): React.ReactElement
                     <label htmlFor={`${ids}-speak-volume`}>{t('settings.speak.volumeDb')}</label>
                     <output htmlFor={`${ids}-speak-volume`}>{speakDraft.volumeDb > 0 ? `+${speakDraft.volumeDb}` : speakDraft.volumeDb} dB</output>
                   </div>
-                  <input id={`${ids}-speak-volume`} type="range" min={-20} max={20} step={1} value={speakDraft.volumeDb} disabled={fieldsDisabled || savingAction === 'speak' || !speakDraft.enabled} onChange={event => editSpeakDraft({ volumeDb: Number(event.target.value) })} onPointerUp={commitSpeakVolume} onBlur={commitSpeakVolume} onKeyUp={commitSpeakVolume} style={{ minWidth: 0, width: '100%', accentColor: colors.primary }} />
+                  <input id={`${ids}-speak-volume`} type="range" min={-20} max={20} step={1} value={speakDraft.volumeDb} disabled={fieldsDisabled || savingAction === 'speak' || !speakDraft.enabled} onChange={event => editSpeakDraft({ volumeDb: Number(event.target.value) })} onPointerUp={commitSpeakVolume} onBlur={commitSpeakVolume} onKeyUp={commitSpeakVolume} style={{ ...rangeStyle(speakDraft.volumeDb, -20, 20), minWidth: 0, width: '100%' }} />
                 </div>
               </>
             )}

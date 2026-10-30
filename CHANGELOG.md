@@ -1,5 +1,12 @@
 # 更新记录 / Changelog
 
+## 未发布 / Unreleased（2026-10-29）
+
+- 精修设置页：音色 ID 与试听作为主操作，合并重复的当前音色名称和收藏操作区域，连接及播放偏好改为轻量分组；减少常态说明，保留手工编辑、清空和可选收藏。
+- Refine settings around voice ID editing and preview, consolidate repeated voice names and saved-voice actions, and use lighter connection/playback groups with less persistent help. Direct editing, clearing and optional saved voices remain available.
+- 完善明暗主题、窄栏换行、键盘焦点与滑杆轨道；补充短时控件反馈，并尊重减少动态效果设置。
+- Improve light/dark themes, narrow layouts, keyboard focus and slider tracks, with brief control feedback that respects reduced-motion preferences.
+
 ## 0.3.1（2026-10-22）
 
 - 修复语音通道投递的超时计时器：等待期间保持计时器有效，投递结束后及时清理，避免 Node.js 22 下超时尚未触发便退出。

@@ -128,6 +128,7 @@ export type FishTtsKey =
   | 'settings.test.failed'
   | 'settings.test.savedConnection'
   | 'settings.preferences.title'
+  | 'settings.preferences.noSave'
   | 'settings.preferences.hint'
   | 'settings.sourceHint'
 
@@ -235,7 +236,7 @@ export const zh: Record<FishTtsKey, string> = {
   'settings.autoplay': '新回复自动朗读',
   'settings.autoplay.hint': '仅自动朗读 DSH 界面打开之后到达的新回复，不会重播历史消息。',
   'settings.volume': '音量',
-  'settings.volume.hint': '只影响 DSH 内朗读播放的音量，不影响生成的音频文件。',
+  'settings.volume.hint': '仅调整 DSH 内朗读音量，生成音频不受影响。',
   'settings.speed': '播放速度',
   'settings.speed.unsupported': '当前环境不支持不变调倍速播放，已固定为 1×',
   'settings.speak.section': '音频生成（智能体调用）',
@@ -259,7 +260,8 @@ export const zh: Record<FishTtsKey, string> = {
   'settings.test.stop': '停止试听',
   'settings.test.failed': '试听失败',
   'settings.test.savedConnection': '当前试听使用已保存的连接设置。',
-  'settings.preferences.title': '播放偏好（无须保存）',
+  'settings.preferences.title': '播放偏好',
+  'settings.preferences.noSave': '无须保存',
   'settings.preferences.hint': '无须保存，应用于后续朗读。',
   'settings.sourceHint': '设置保存在本机 $DSH_HOME/fish-tts/，API Key 使用 AES-256-GCM 加密存储。',
 }
@@ -362,7 +364,7 @@ export const en: Record<FishTtsKey, string> = {
   'settings.autoplay': 'Read new replies automatically',
   'settings.autoplay.hint': 'Only new replies that arrive while the DSH interface is open are read automatically; history is never replayed.',
   'settings.volume': 'Volume',
-  'settings.volume.hint': 'Affects read-aloud playback volume inside DSH only; it does not affect generated audio files.',
+  'settings.volume.hint': 'Only affects read-aloud volume in DSH, not generated audio.',
   'settings.speed': 'Playback speed',
   'settings.speed.unsupported': 'Pitch-preserving speed control is unavailable in this environment; playback stays at 1×',
   'settings.speak.section': 'Audio generation (agent calls)',
@@ -386,7 +388,8 @@ export const en: Record<FishTtsKey, string> = {
   'settings.test.stop': 'Stop preview',
   'settings.test.failed': 'Preview failed',
   'settings.test.savedConnection': 'This preview uses the saved connection settings.',
-  'settings.preferences.title': 'Playback preferences (no save needed)',
+  'settings.preferences.title': 'Playback preferences',
+  'settings.preferences.noSave': 'No save needed',
   'settings.preferences.hint': 'No save needed. These apply to subsequent playback.',
   'settings.sourceHint': 'Settings live in $DSH_HOME/fish-tts/ on this machine; the API key is encrypted with AES-256-GCM.',
 }

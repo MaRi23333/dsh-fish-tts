@@ -1,6 +1,6 @@
 # 更新记录 / Changelog
 
-## 未发布 / Unreleased
+## 0.3.2（2026-11-03）
 
 - 设置侧边栏新增专属扬声器图标，支持中英文名称及设置面板重新挂载。
 - Add a dedicated speaker icon to the settings sidebar for both languages and remounted panels.

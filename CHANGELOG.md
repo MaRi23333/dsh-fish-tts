@@ -1,7 +1,9 @@
 # 更新记录 / Changelog
 
-## 未发布 / Unreleased（2026-10-29）
+## 未发布 / Unreleased
 
+- 设置侧边栏新增专属扬声器图标，支持中英文名称及设置面板重新挂载。
+- Add a dedicated speaker icon to the settings sidebar for both languages and remounted panels.
 - 精修设置页：音色 ID 与试听作为主操作，合并重复的当前音色名称和收藏操作区域，连接及播放偏好改为轻量分组；减少常态说明，保留手工编辑、清空和可选收藏。
 - Refine settings around voice ID editing and preview, consolidate repeated voice names and saved-voice actions, and use lighter connection/playback groups with less persistent help. Direct editing, clearing and optional saved voices remain available.
 - 完善明暗主题、窄栏换行、键盘焦点与滑杆轨道；补充短时控件反馈，并尊重减少动态效果设置。

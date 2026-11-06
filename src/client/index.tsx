@@ -24,7 +24,7 @@ import { FishTtsInputToggle, type FishTtsInputToggleInjected } from './FishTtsIn
 import { FishTtsSettings, type FishTtsSettingsInjected } from './FishTtsSettings.tsx'
 import { en, zh } from './locales.ts'
 import { createAutoPlayPreference } from './preferences.ts'
-import { decorateSettingsNavIcon } from './nav-icon.ts'
+import { registerSettingsNavIcon } from './nav-icon.ts'
 
 const NS = 'fish-tts'
 
@@ -38,7 +38,7 @@ export function apply(ctx: ClientContext): void {
 
   // ── dictionaries (typed namespace declared in locales.ts) ────────────────
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'fish-tts: dictionaries')
-  decorateSettingsNavIcon(ctx)
+  registerSettingsNavIcon(ctx)
 
   // ── auto-play preference (browser-local, shared across all UI surfaces) ──
   const preference = createAutoPlayPreference(() => window.localStorage)

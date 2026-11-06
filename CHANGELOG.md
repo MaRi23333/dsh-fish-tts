@@ -1,5 +1,10 @@
 # 更新记录 / Changelog
 
+## 0.3.3（未发布 / Unreleased，2026-11-06）
+
+- 通过 DSH 0.2.2 的 `settings.section.icon` 正式插槽提供侧边栏扬声器图标，按分区 ID 匹配并跟随宿主尺寸；移除按文字查找与 DOM 替换监听，修复新版客户端的图标显示。
+- Provide the sidebar speaker through DSH 0.2.2's `settings.section.icon` slot, matched by section ID and sized by the host. Remove label-based DOM replacement to restore the icon in the updated client.
+
 ## 0.3.2（2026-11-03）
 
 - 设置侧边栏新增专属扬声器图标，支持中英文名称及设置面板重新挂载。

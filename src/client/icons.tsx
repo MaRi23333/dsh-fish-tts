@@ -12,15 +12,17 @@
  */
 
 export interface SpeakerIconProps {
+  /** Square edge requested by the host; message actions default to 16px. */
+  size?: number
   /** Render the muted variant (speaker body + X). */
   muted?: boolean
   /** Render the two-arc playing variant (waves). */
   playing?: boolean
 }
 
-export function SpeakerIcon({ muted = false, playing = false }: SpeakerIconProps): React.ReactElement {
+export function SpeakerIcon({ muted = false, playing = false, size = 16 }: SpeakerIconProps): React.ReactElement {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
       {/* Speaker body outline — band weight matches native action icons (~1.35px). */}
       <path
         d="M2.6 6.9H5.1L8.2 4V12L5.1 9.1H2.6Z"

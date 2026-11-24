@@ -8,7 +8,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
-  <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
+  <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: Apache-2.0" />
   <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.0--rc.2-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.2.0-rc.2" />
 </p>
 
@@ -34,7 +34,7 @@
 
 ## 功能
 
-- **朗读按钮**：每条定稿的助手消息操作条里有一个「朗读 / Read aloud」按钮（图标与原生操作条图标同风格），点击合成并播放该条回复；**播放中再次点击该消息的按钮即中断停止**（不会从头重播），点击其他消息的按钮则直接切换播放，合成等待中再点一次可取消。markdown 会被清洗：路径 / URL / 长编号 / 代码块不会读出来。
+- **朗读回复**：等 AI 写完，点这条回复下方的「朗读」即可播放。再点一次就停止；如果还在合成，则取消。点另一条回复的「朗读」会切换过去。文件路径、网址、长编号和代码块不会逐字念出来。
 - **自动朗读**：输入框工具行的小喇叭开关（与设置页同步），开启后自动朗读 DSH 界面打开之后到达的新回复。
 - **常用音色收藏**：为音色 ID 保存易辨识的名称和多行备注，从下拉列表直接切换并立即生效。收藏保存在本机；切换保留其他未保存设置，移除收藏也不会清空当前音色。
 - **音频生成工具 `fish_tts_speak`**：供智能体把台词生成为音频文件；所在会话若接了聊天通道（如 IM 机器人），文件交由通道插件投递为语音条。台词清洗、每会话限频、服务端响度归一化与文件生命周期都在本插件完成；Fish 情绪/声音方括号标签（`[soft]`、`[laughing]` 等）原样透传、不被念出来。通道插件通过 `ctx.fishTts.registerDelivery` 注册投递器，出站敏感词过滤仍在通道侧执行。
@@ -224,7 +224,9 @@ pnpm run check:pack # npm pack 内容白名单校验
 
 ## License
 
-[MIT](./LICENSE)
+[Apache-2.0](./LICENSE)
+
+Copyright (c) 2026 dsh-fish-tts contributors.
 
 ### 合规与第三方声明
 

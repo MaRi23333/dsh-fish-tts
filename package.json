@@ -1,6 +1,6 @@
 {
   "name": "dsh-fish-tts",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Text-to-speech (TTS) plugin for DeepSeek Harness — Fish Audio API only, bring your own key. Per-message read-aloud, auto-read toggle in the composer, an agent-callable audio-generation tool for chat channels, settings for model / voice / encrypted API key / proxy. Third-party, not affiliated with Fish Audio.",
   "keywords": [
     "deepseek-harness",
@@ -66,7 +66,7 @@
     "check:pack": "node scripts/check-pack.mjs",
     "prepack": "pnpm run build"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.1",
     "undici": "^7.30.1"

@@ -1,6 +1,13 @@
 # 更新记录 / Changelog
 
-## 0.3.3（未发布 / Unreleased，2026-11-06）
+## 0.3.4（2026-11-24）
+
+- 精简中英文首页的朗读说明。
+- 新版本采用 Apache-2.0 许可，既有已发布版本的许可继续有效。
+- Streamline the read-aloud documentation.
+- This release adopts Apache-2.0. Previously published releases retain their original licenses.
+
+## 0.3.3（2026-11-06）
 
 - 通过 DSH 0.2.2 的 `settings.section.icon` 正式插槽提供侧边栏扬声器图标，按分区 ID 匹配并跟随宿主尺寸；移除按文字查找与 DOM 替换监听，修复新版客户端的图标显示。
 - Provide the sidebar speaker through DSH 0.2.2's `settings.section.icon` slot, matched by section ID and sized by the host. Remove label-based DOM replacement to restore the icon in the updated client.

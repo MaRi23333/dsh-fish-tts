@@ -8,7 +8,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/MaRi23333/dsh-fish-tts/ci.yml?style=flat-square&label=CI" alt="CI" />
-  <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: MIT" />
+  <img src="https://img.shields.io/github/license/MaRi23333/dsh-fish-tts?style=flat-square" alt="License: Apache-2.0" />
   <img src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.0--rc.2-4d6bfe?style=flat-square" alt="DeepSeek Harness 0.2.0-rc.2" />
 </p>
 
@@ -31,13 +31,7 @@ bilingual (English / 中文, follows the DSH locale).
 
 ## Features
 
-- **Read-aloud action**: every finalized assistant message gets a speaker button in its
-  action strip (same icon style as the native actions). Click to synthesize and play that
-  reply; **click the same message's button again while playing to stop** (no restart from
-  the top), clicking another message's button switches playback straight over, and a
-  second click while synthesis is still in flight cancels it. Markdown is
-  cleaned before speaking: paths, URLs, long ids and code blocks are
-  replaced with placeholders instead of being read out.
+- **Read a reply aloud:** When the AI finishes writing, click the speaker below its reply. Click again to stop playback or cancel while the audio is being prepared. Click the speaker on another reply to switch to it. Paths, URLs, long IDs, and code blocks are replaced with placeholders rather than read out in full.
 - **Auto-read**: a small speaker toggle in the composer tool row (synced with the settings
   page). When enabled, new replies that arrive while the DSH interface is open are read
   automatically.
@@ -300,7 +294,9 @@ pnpm run check:pack # npm pack content whitelist check
 
 ## License
 
-[MIT](./LICENSE)
+[Apache-2.0](./LICENSE)
+
+Copyright (c) 2026 dsh-fish-tts contributors.
 
 ### Compliance & Third-Party Notice
 
